@@ -36,7 +36,7 @@ The space-saving table view, perfect for tracking many teams at once.
 
 Use this button to open the repository directly in HACS:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ChamesBont&repository=DCompact-Team-Tracker-Card&category=frontend)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ChamesBont&repository=Compact-Team-Tracker-Card&category=frontend)
 
 *OR* follow these manual steps:
 

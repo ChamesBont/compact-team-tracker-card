@@ -20,11 +20,11 @@ const LANG = {
     hide_finished_help: "Versteckt Spiele vom Vortag automatisch um Mitternacht, damit nur der aktuelle Spieltag sichtbar bleibt.",
     show_scorers: "Torschützen auflisten",
     show_sun: "Statistiken (S-U-N) anzeigen",
-    show_prob: "Siegwahrscheinlichkeit anzeigen",
+    show_last_play: "Letzten Spielzug anzeigen",
+    last_play_help: "Zeigt bei Live-Spielen (z.B. NFL) eine kurze Textzusammenfassung des letzten Spielzugs an.",
     scheduled: "Geplant",
     finished: "Beendet",
-    live: "LIVE",
-    win_prob: "Siegwahrscheinlichkeit"
+    live: "LIVE"
   },
   en: {
     manage_teams: "Manage Teams:",
@@ -40,11 +40,11 @@ const LANG = {
     hide_finished_help: "Automatically hides matches from previous days at midnight to keep the dashboard clean.",
     show_scorers: "List scorers",
     show_sun: "Show statistics (W-D-L)",
-    show_prob: "Show win probability",
+    show_last_play: "Show last play",
+    last_play_help: "Displays a short text summary of the most recent play during live games (e.g., NFL).",
     scheduled: "Scheduled",
     finished: "Finished",
-    live: "LIVE",
-    win_prob: "Win Probability"
+    live: "LIVE"
   }
 };
 
@@ -90,7 +90,9 @@ class CompactTeamTrackerEditor extends LitElement {
           <p class="help-text">${t.hide_finished_help}</p>
           <div class="switch-row"><ha-switch .checked="${this._config.show_scorers === true}" .configValue="${"show_scorers"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_scorers}</span></div>
           <div class="switch-row"><ha-switch .checked="${this._config.show_record === true}" .configValue="${"show_record"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_sun}</span></div>
-          <div class="switch-row"><ha-switch .checked="${this._config.show_probabilities !== false}" .configValue="${"show_probabilities"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_prob}</span></div>
+          
+          <div class="switch-row"><ha-switch .checked="${this._config.show_last_play !== false}" .configValue="${"show_last_play"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_last_play}</span></div>
+          <p class="help-text">${t.last_play_help}</p>
         </div>
       </div>
     `;
@@ -191,15 +193,14 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const isHome = a.team_homeaway === 'home';
-    const h = { logo: isHome ? a.team_logo : a.opponent_logo, abbr: isHome ? a.team_abbr : a.opponent_abbr, score: isHome ? a.team_score : a.opponent_score, rec: isHome ? a.team_record : a.opponent_record, prob: isHome ? a.team_home_win_probability : a.team_away_win_probability };
-    const v = { logo: isHome ? a.opponent_logo : a.team_logo, abbr: isHome ? a.opponent_abbr : a.team_abbr, score: isHome ? a.opponent_score : a.team_score, rec: isHome ? a.opponent_record : a.team_record, prob: isHome ? a.team_away_win_probability : a.team_home_win_probability };
-    
+    const h = { logo: isHome ? a.team_logo : a.opponent_logo, abbr: isHome ? a.team_abbr : a.opponent_abbr, score: isHome ? a.team_score : a.opponent_score, rec: isHome ? a.team_record : a.opponent_record };
+    const v = { logo: isHome ? a.opponent_logo : a.team_logo, abbr: isHome ? a.opponent_abbr : a.team_abbr, score: isHome ? a.opponent_score : a.team_score, rec: isHome ? a.opponent_record : a.team_record };
     const kDate = new Date(a.date);
     const timeStr = kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const fullDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const showLeague = this.config.show_league !== false;
-    const showProbabilities = this.config.show_probabilities !== false;
+    const showLastPlay = this.config.show_last_play !== false;
 
     return html`
       <div class="card-wrapper">
@@ -223,19 +224,10 @@ class CompactTeamTracker extends LitElement {
           </div>
           <div class="team-box"><img src="${v.logo}" class="team-logo"><div class="name">${v.abbr}</div>${this.config.show_record && v.rec ? html`<div class="record">${v.rec}</div>` : ''}</div>
         </div>
-
-        ${showProbabilities && s !== 'POST' && (h.prob !== undefined || v.prob !== undefined) ? html`
-          <div class="probability-row">
-            <div class="prob-val">${h.prob ? (h.prob * 100).toFixed(0) : 0}%</div>
-            <div class="prob-label">${t.win_prob}</div>
-            <div class="prob-val">${v.prob ? (v.prob * 100).toFixed(0) : 0}%</div>
-          </div>
-        ` : ''}
-
         <div class="info-footer">
           <div class="venue">${a.venue}${a.location ? `, ${a.location}` : ''}</div>
           ${this.config.show_scorers && a.scoring_plays ? html`<div class="scorers-list">${a.scoring_plays.map(p => html`<div class="scorer-item"><b>${p.team_abbr}</b>: ${p.score_play} (${p.score_time})</div>`)}</div>` : ''}
-          ${s === 'IN' && a.last_play ? html`<div class="play">${a.last_play}</div>` : ''}
+          ${showLastPlay && s === 'IN' && a.last_play ? html`<div class="play">${a.last_play}</div>` : ''}
         </div>
       </div>
     `;
@@ -288,11 +280,6 @@ class CompactTeamTracker extends LitElement {
       .kickoff-time { font-size: 24px; font-weight: 800; line-height: 1; }
       .kickoff-date { font-size: 12px; font-weight: bold; margin-top: 2px; }
       .kickoff-exact { font-size: 10px; opacity: 0.6; }
-      
-      .probability-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 16px; margin-top: 4px; font-size: 10px; }
-      .prob-val { width: 50px; text-align: center; font-weight: bold; opacity: 0.9; }
-      .prob-label { flex: 1; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
-
       .info-footer { margin-top: 10px; padding: 8px 12px 0; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; }
       .venue { font-weight: bold; margin-bottom: 4px; }
       .scorers-list { margin: 6px 0; text-align: left; font-size: 9px; display: grid; grid-template-columns: 1fr; gap: 2px; opacity: 0.9; }

@@ -2,9 +2,6 @@
 
 A highly customizable and space-saving Lovelace card for the [Team Tracker Integration](https://github.com/vasqued2/ha-teamtracker). This card is optimized to display multiple sports events simultaneously without cluttering your Home Assistant dashboard.
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg?style=flat-square)
-![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)
-
 ---
 
 ## 📸 Screenshots

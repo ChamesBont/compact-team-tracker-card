@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.5 beta 1 !!!");
+console.log("!!! TEAM TRACKER v2.0.5 beta 2 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;

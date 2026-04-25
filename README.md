@@ -1,4 +1,39 @@
-# Compact-Team-Tracker-Card
-A custom card for the Home Assistant frontend that displays information from Team Tracker.
+# Compact Team Tracker Card
+A highly customizable and space-saving Lovelace card for the Team Tracker Integration. This card is optimized to display multiple sports events simultaneously without cluttering your Home Assistant dashboard.
 
-Compact Team Tracker CardEine hochgradig anpassbare und platzsparende Lovelace-Karte für die Team Tracker Integration. Diese Karte ist darauf optimiert, viele Sport-Ereignisse gleichzeitig darzustellen, ohne dein Dashboard zu überladen.✨ FeaturesZwei Layout-Modi: Wähle zwischen dem detailreichen Standard-Layout (Kartenansicht) und dem minimalistischen Ultra-Compact-Layout (Tabellenansicht).Smart Filter: Option, nur das nächste oder aktuell laufende Spiel anzuzeigen.Prioritäts-System: Markiere dein Lieblingsteam als Haupt-Sensor, damit es bei zeitgleichen Partien immer an erster Stelle steht.Automatisches Aufräumen: Beendete Spiele können automatisch um Mitternacht ausgeblendet werden.Torschützen: Optionale Auflistung der Scoring-Plays bei Live- und beendeten Spielen.Multi-Team Support: Verwalte beliebig viele Teams in einer einzigen Karte.Mehrsprachig: Unterstützt automatisch Deutsch und Englisch.📸 Screenshots(Tipp: Lade hier ein Bild deiner Karte hoch und verlinke es hier)🚀 InstallationWeg 1: Über HACS (Empfohlen)Öffne HACS in Home Assistant.Klicke oben rechts auf die drei Punkte und wähle Benutzerdefinierte Repositories.Füge die URL deines Repositories hinzu: https://github.com/DEIN_GITHUB_NAME/DEIN_REPO_NAMEWähle als Typ Lovelace.Klicke auf Hinzufügen und installiere die Karte.Weg 2: ManuellLade die compact-team-tracker.js herunter.Kopiere sie in deinen Home Assistant Ordner /config/www/.Füge die Ressource in Home Assistant hinzu:Einstellungen -> Dashboards -> Drei Punkte (oben rechts) -> Ressourcen -> Ressource hinzufügen.URL: /local/compact-team-tracker.jsTyp: JavaScript Module🛠 KonfigurationDie Karte verfügt über einen grafischen Editor. Du musst keine YAML-Codes schreiben.OptionBeschreibungTeams verwaltenFüge hier alle Team-Tracker Sensoren hinzu, die du verfolgen möchtest.PrioritätWähle dein wichtigstes Team. Es gewinnt bei Zeitgleichheit in der Sortierung.Nur das nächste SpielReduziert die Anzeige auf die aktuell wichtigste Partie.Ultra-Compact-LayoutSchaltet auf die schmale Tabellenansicht um.Liga-InformationenBlendet das Logo und den Namen der Liga im Header aus/ein.Beendete Spiele ausblendenHält das Dashboard sauber, indem alte Spiele ausgeblendet werden.TorschützenZeigt an, wer wann getroffen hat.📋 VoraussetzungenDiese Karte benötigt die Team Tracker Integration, um zu funktionieren. Stelle sicher, dass du deine Teams dort bereits angelegt hast.📄 LizenzDieses Projekt ist unter der MIT-Lizenz lizenziert - siehe die LICENSE Datei für Details.
+✨ FeaturesTwo Layout Modes: 
+- Toggle between the detailed Standard Card View and the minimalist Ultra-Compact Layout (table view).
+- Smart Filter: Option to show only the next upcoming or currently live match.
+- Priority System: Define a "Main Sensor" to ensure your favorite team is always prioritized in the sorting order.
+- Auto-Cleanup: Automatically hide finished matches from previous days at midnight.
+- Scoring Plays: Optional list of scorers for live and finished matches, including timestamps.
+- Multi-Team Support: Manage as many teams as you like within a single card.
+- Multi-Language: Built-in support for English and German (auto-detected).
+
+  📸 Screenshots
+  (Tip: Upload an image of your card to the img folder in your repo and link it here)
+
+🚀 Installation
+Method 1: Via HACS (Recommended)
+1. Open HACS in Home Assistant.
+2. Click the three dots in the top right corner and select Custom repositories.
+3. Add the URL of this repository: https://github.com/ChamesBont/Compact-Team-Tracker-Card
+4. Select Lovelace as the category.
+5. Click Add and then install the card.
+
+Method 2: Manual Installation
+1. Download the compact-team-tracker.js file.
+2. Copy it to your Home Assistant /config/www/ folder.
+3. Add the resource in Home Assistant:
+     - Settings -> Dashboards -> Three dots (top right) -> Resources -> Add Resource.
+     - URL: /local/compact-team-tracker.js
+     - Type: JavaScript Module
+   
+🛠 Configuration
+The card features a full Graphic User Interface (GUI) editor. No YAML coding required!
+
+OptionDescriptionManage TeamsAdd all Team Tracker sensors you want to follow.PriorityChoose your main team. It will be prioritized if multiple games start at the same time.Show Next OnlyLimits the display to the single most relevant current or upcoming match.Ultra-Compact LayoutSwitches to the space-saving table view.League InformationToggle the visibility of the league logo and name in the header.Hide Finished MatchesAutomatically hides matches from previous days to keep the dashboard clean.List ScorersDisplays who scored and when.Show Statistics (W-D-L)Displays the team's current season record.
+
+📋 Requirements
+This card requires the Team Tracker Integration "ha-teamtracker" by @vasqued2to be installed. Make sure you have configured your team sensors there first.
+https://github.com/vasqued2/ha-teamtracker

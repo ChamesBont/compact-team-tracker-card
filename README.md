@@ -8,14 +8,17 @@ A highly customizable and space-saving Lovelace card for the [Team Tracker Integ
 
 ### Standard Card Layout with multiple Teams
 The detailed view showing all match information, venue, and status.
+
 ![Standard Card View](screenshots/Screenshot_compact_team_tracker_card_1.png)
 
 ### Ultra-Compact Layout
 The space-saving table view, perfect for tracking many teams at once.
+
 ![Ultra-Compact View](screenshots/Screenshot_compact_team_tracker_card_2.png)
 
 ### Visual Editor
 Multiple options for customization.
+
 ![Ultra-Compact View](screenshots/Screenshot_compact_team_tracker_card_3.png)
 
 ---

@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.1 GELADEN !!!");
+console.log("!!! TEAM TRACKER v2.0.2 GELADEN !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -20,6 +20,7 @@ const LANG = {
     hide_finished_help: "Versteckt Spiele vom Vortag automatisch um Mitternacht, damit nur der aktuelle Spieltag sichtbar bleibt.",
     show_scorers: "Torschützen auflisten",
     show_sun: "Statistiken (S-U-N) anzeigen",
+    show_prob: "Siegwahrscheinlichkeit anzeigen",
     scheduled: "Geplant",
     finished: "Beendet",
     live: "LIVE",
@@ -39,6 +40,7 @@ const LANG = {
     hide_finished_help: "Automatically hides matches from previous days at midnight to keep the dashboard clean.",
     show_scorers: "List scorers",
     show_sun: "Show statistics (W-D-L)",
+    show_prob: "Show win probability",
     scheduled: "Scheduled",
     finished: "Finished",
     live: "LIVE",
@@ -88,6 +90,7 @@ class CompactTeamTrackerEditor extends LitElement {
           <p class="help-text">${t.hide_finished_help}</p>
           <div class="switch-row"><ha-switch .checked="${this._config.show_scorers === true}" .configValue="${"show_scorers"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_scorers}</span></div>
           <div class="switch-row"><ha-switch .checked="${this._config.show_record === true}" .configValue="${"show_record"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_sun}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.show_probabilities !== false}" .configValue="${"show_probabilities"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_prob}</span></div>
         </div>
       </div>
     `;
@@ -196,6 +199,7 @@ class CompactTeamTracker extends LitElement {
     const fullDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const showLeague = this.config.show_league !== false;
+    const showProbabilities = this.config.show_probabilities !== false;
 
     return html`
       <div class="card-wrapper">
@@ -220,11 +224,11 @@ class CompactTeamTracker extends LitElement {
           <div class="team-box"><img src="${v.logo}" class="team-logo"><div class="name">${v.abbr}</div>${this.config.show_record && v.rec ? html`<div class="record">${v.rec}</div>` : ''}</div>
         </div>
 
-        ${s !== 'POST' && (h.prob || v.prob) ? html`
+        ${showProbabilities && s !== 'POST' && (h.prob !== undefined || v.prob !== undefined) ? html`
           <div class="probability-row">
-            <div class="prob-val">${(h.prob * 100).toFixed(0)}%</div>
+            <div class="prob-val">${h.prob ? (h.prob * 100).toFixed(0) : 0}%</div>
             <div class="prob-label">${t.win_prob}</div>
-            <div class="prob-val">${(v.prob * 100).toFixed(0)}%</div>
+            <div class="prob-val">${v.prob ? (v.prob * 100).toFixed(0) : 0}%</div>
           </div>
         ` : ''}
 

@@ -4,6 +4,12 @@ A highly customizable and space-saving Lovelace card for the [Team Tracker Integ
 
 ---
 
+## 📋 Requirements
+
+This card is a frontend display and requires the [Team Tracker Integration](https://github.com/vasqued2/ha-teamtracker) to be installed via HACS first. 
+
+---
+
 ## 📸 Screenshots
 
 ### Standard Card Layout with multiple Teams
@@ -71,12 +77,6 @@ The card features a full **Graphic User Interface (GUI)** editor. No YAML coding
 | **Hide Finished Matches** | Automatically hides matches from previous days to keep the dashboard clean. |
 | **List Scorers** | Displays who scored and the time of the goal. |
 | **Show Statistics (S-U-N)** | Displays the team's current season record (Wins-Draws-Losses). |
-
----
-
-## 📋 Requirements
-
-This card is a frontend display and requires the [Team Tracker Integration](https://github.com/vasqued2/ha-teamtracker) to be installed via HACS first. 
 
 ---
 

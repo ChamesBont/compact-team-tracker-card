@@ -44,11 +44,11 @@ Use this button to open the repository directly in HACS:
 
 ### Method 2: Manual Installation
 
-1.  Download the `compact-team-tracker.js` file from this repository.
+1.  Download the `Compact-Team-Tracker-Card.js` file from this repository.
 2.  Upload it to your Home Assistant `/config/www/` folder.
 3.  Add the resource in Home Assistant:
     * **Settings** -> **Dashboards** -> **Three dots (top right)** -> **Resources** -> **Add Resource**.
-    * URL: `/local/compact-team-tracker.js`
+    * URL: `/local/Compact-Team-Tracker-Card.js`
     * Type: `JavaScript Module`
 
 ---

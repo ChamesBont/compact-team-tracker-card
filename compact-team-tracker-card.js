@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.0 (i18n) GELADEN !!!");
+console.log("!!! TEAM TRACKER v2.0.1 GELADEN !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -22,7 +22,8 @@ const LANG = {
     show_sun: "Statistiken (S-U-N) anzeigen",
     scheduled: "Geplant",
     finished: "Beendet",
-    live: "LIVE"
+    live: "LIVE",
+    win_prob: "Siegwahrscheinlichkeit"
   },
   en: {
     manage_teams: "Manage Teams:",
@@ -40,11 +41,12 @@ const LANG = {
     show_sun: "Show statistics (W-D-L)",
     scheduled: "Scheduled",
     finished: "Finished",
-    live: "LIVE"
+    live: "LIVE",
+    win_prob: "Win Probability"
   }
 };
 
-// --- EDITOR v2.0.0 ---
+// --- EDITOR ---
 class CompactTeamTrackerEditor extends LitElement {
   static get properties() { return { hass: {}, _config: {} }; }
   
@@ -75,48 +77,17 @@ class CompactTeamTrackerEditor extends LitElement {
         
         <div class="prio-section">
           <div class="label">${t.priority_label}</div>
-          <ha-entity-picker 
-            .label="${t.prio_picker}" 
-            .hass="${this.hass}" 
-            .value="${this._config.priority_entity || ''}" 
-            .includeDomains="${["sensor"]}" 
-            @value-changed="${this._prioChanged}" 
-            allow-custom-entity>
-          </ha-entity-picker>
+          <ha-entity-picker .label="${t.prio_picker}" .hass="${this.hass}" .value="${this._config.priority_entity || ''}" .includeDomains="${["sensor"]}" @value-changed="${this._prioChanged}" allow-custom-entity></ha-entity-picker>
           <p class="help-text">${t.prio_help}</p>
           
           <div class="label">${t.options_label}</div>
-
-          <div class="switch-row">
-            <ha-switch .checked="${this._config.show_next_only === true}" .configValue="${"show_next_only"}" @change="${this._toggleOption}"></ha-switch>
-            <span>${t.next_only}</span>
-          </div>
-          
-          <div class="switch-row">
-            <ha-switch .checked="${this._config.layout === 'ultra'}" .configValue="${"layout"}" @change="${this._toggleLayout}"></ha-switch>
-            <span>${t.ultra_layout}</span>
-          </div>
-
-          <div class="switch-row">
-            <ha-switch .checked="${this._config.show_league !== false}" .configValue="${"show_league"}" @change="${this._toggleOption}"></ha-switch>
-            <span>${t.show_league}</span>
-          </div>
-
-          <div class="switch-row">
-            <ha-switch .checked="${this._config.only_today !== false}" .configValue="${"only_today"}" @change="${this._toggleOption}"></ha-switch>
-            <span>${t.hide_finished}</span>
-          </div>
+          <div class="switch-row"><ha-switch .checked="${this._config.show_next_only === true}" .configValue="${"show_next_only"}" @change="${this._toggleOption}"></ha-switch><span>${t.next_only}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.layout === 'ultra'}" .configValue="${"layout"}" @change="${this._toggleLayout}"></ha-switch><span>${t.ultra_layout}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.show_league !== false}" .configValue="${"show_league"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_league}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.only_today !== false}" .configValue="${"only_today"}" @change="${this._toggleOption}"></ha-switch><span>${t.hide_finished}</span></div>
           <p class="help-text">${t.hide_finished_help}</p>
-
-          <div class="switch-row">
-            <ha-switch .checked="${this._config.show_scorers === true}" .configValue="${"show_scorers"}" @change="${this._toggleOption}"></ha-switch>
-            <span>${t.show_scorers}</span>
-          </div>
-          
-          <div class="switch-row">
-            <ha-switch .checked="${this._config.show_record === true}" .configValue="${"show_record"}" @change="${this._toggleOption}"></ha-switch>
-            <span>${t.show_sun}</span>
-          </div>
+          <div class="switch-row"><ha-switch .checked="${this._config.show_scorers === true}" .configValue="${"show_scorers"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_scorers}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.show_record === true}" .configValue="${"show_record"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_sun}</span></div>
         </div>
       </div>
     `;
@@ -150,7 +121,7 @@ class CompactTeamTrackerEditor extends LitElement {
 }
 customElements.define("compact-team-tracker-editor", CompactTeamTrackerEditor);
 
-// --- KARTE v2.0.0 ---
+// --- KARTE ---
 class CompactTeamTracker extends LitElement {
   static get properties() { return { hass: {}, config: {} }; }
   setConfig(config) { this.config = config; }
@@ -217,8 +188,9 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const isHome = a.team_homeaway === 'home';
-    const h = { logo: isHome ? a.team_logo : a.opponent_logo, abbr: isHome ? a.team_abbr : a.opponent_abbr, score: isHome ? a.team_score : a.opponent_score, rec: isHome ? a.team_record : a.opponent_record };
-    const v = { logo: isHome ? a.opponent_logo : a.team_logo, abbr: isHome ? a.opponent_abbr : a.team_abbr, score: isHome ? a.opponent_score : a.team_score, rec: isHome ? a.opponent_record : a.team_record };
+    const h = { logo: isHome ? a.team_logo : a.opponent_logo, abbr: isHome ? a.team_abbr : a.opponent_abbr, score: isHome ? a.team_score : a.opponent_score, rec: isHome ? a.team_record : a.opponent_record, prob: isHome ? a.team_home_win_probability : a.team_away_win_probability };
+    const v = { logo: isHome ? a.opponent_logo : a.team_logo, abbr: isHome ? a.opponent_abbr : a.team_abbr, score: isHome ? a.opponent_score : a.team_score, rec: isHome ? a.opponent_record : a.team_record, prob: isHome ? a.team_away_win_probability : a.team_home_win_probability };
+    
     const kDate = new Date(a.date);
     const timeStr = kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const fullDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -247,6 +219,15 @@ class CompactTeamTracker extends LitElement {
           </div>
           <div class="team-box"><img src="${v.logo}" class="team-logo"><div class="name">${v.abbr}</div>${this.config.show_record && v.rec ? html`<div class="record">${v.rec}</div>` : ''}</div>
         </div>
+
+        ${s !== 'POST' && (h.prob || v.prob) ? html`
+          <div class="probability-row">
+            <div class="prob-val">${(h.prob * 100).toFixed(0)}%</div>
+            <div class="prob-label">${t.win_prob}</div>
+            <div class="prob-val">${(v.prob * 100).toFixed(0)}%</div>
+          </div>
+        ` : ''}
+
         <div class="info-footer">
           <div class="venue">${a.venue}${a.location ? `, ${a.location}` : ''}</div>
           ${this.config.show_scorers && a.scoring_plays ? html`<div class="scorers-list">${a.scoring_plays.map(p => html`<div class="scorer-item"><b>${p.team_abbr}</b>: ${p.score_play} (${p.score_time})</div>`)}</div>` : ''}
@@ -303,6 +284,11 @@ class CompactTeamTracker extends LitElement {
       .kickoff-time { font-size: 24px; font-weight: 800; line-height: 1; }
       .kickoff-date { font-size: 12px; font-weight: bold; margin-top: 2px; }
       .kickoff-exact { font-size: 10px; opacity: 0.6; }
+      
+      .probability-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 16px; margin-top: 4px; font-size: 10px; }
+      .prob-val { width: 50px; text-align: center; font-weight: bold; opacity: 0.9; }
+      .prob-label { flex: 1; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+
       .info-footer { margin-top: 10px; padding: 8px 12px 0; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; }
       .venue { font-weight: bold; margin-bottom: 4px; }
       .scorers-list { margin: 6px 0; text-align: left; font-size: 9px; display: grid; grid-template-columns: 1fr; gap: 2px; opacity: 0.9; }

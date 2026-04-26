@@ -66,6 +66,11 @@ class CompactTeamTrackerEditor extends LitElement {
     return LANG[l] || LANG['en'];
   }
 
+  _filterEntity(stateObj) {
+    const attr = stateObj.attributes.attribution || "";
+    return attr.toLowerCase().includes("espn") || stateObj.entity_id.includes("team_tracker");
+  }
+
   render() {
     if (!this.hass || !this._config) return html``;
     const t = this._lang;
@@ -76,16 +81,38 @@ class CompactTeamTrackerEditor extends LitElement {
         <div class="config-box">
           ${this._config.entities.map((ent, idx) => html`
             <div class="entity-row" key="${idx}">
-              <ha-entity-picker .label="${`Team ${idx + 1}`}" .hass="${this.hass}" .value="${ent}" .includeDomains="${["sensor"]}" @value-changed="${(ev) => this._entityChanged(idx, ev)}" allow-custom-entity></ha-entity-picker>
+              <ha-entity-picker 
+                .label="${`Team ${idx + 1}`}" 
+                .hass="${this.hass}" 
+                .value="${ent}" 
+                .includeDomains="${["sensor"]}" 
+                .entityFilter="${(s) => this._filterEntity(s)}"
+                @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
+                allow-custom-entity>
+              </ha-entity-picker>
               <ha-icon icon="mdi:delete" class="delete-icon" @click="${() => this._removeEntity(idx)}"></ha-icon>
             </div>
           `)}
-          <ha-entity-picker .label="${t.add_team}" .hass="${this.hass}" .includeDomains="${["sensor"]}" @value-changed="${this._addEntity}"></ha-entity-picker>
+          <ha-entity-picker 
+            .label="${t.add_team}" 
+            .hass="${this.hass}" 
+            .includeDomains="${["sensor"]}" 
+            .entityFilter="${(s) => this._filterEntity(s)}"
+            @value-changed="${this._addEntity}">
+          </ha-entity-picker>
         </div>
 
         <div class="section-title">${t.priority_label}</div>
         <div class="config-box">
-          <ha-entity-picker .label="${t.prio_picker}" .hass="${this.hass}" .value="${this._config.priority_entity || ''}" .includeDomains="${["sensor"]}" @value-changed="${this._prioChanged}" allow-custom-entity></ha-entity-picker>
+          <ha-entity-picker 
+            .label="${t.prio_picker}" 
+            .hass="${this.hass}" 
+            .value="${this._config.priority_entity || ''}" 
+            .includeDomains="${["sensor"]}" 
+            .entityFilter="${(s) => this._filterEntity(s)}"
+            @value-changed="${this._prioChanged}" 
+            allow-custom-entity>
+          </ha-entity-picker>
           <p class="help-text">${t.prio_help}</p>
         </div>
 

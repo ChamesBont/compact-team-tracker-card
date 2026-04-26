@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.3 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.4 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -128,7 +128,7 @@ class CompactTeamTrackerEditor extends LitElement {
         <div class="section-title">${t.match_info_section}</div>
         <div class="config-box">
           <div class="switch-row"><ha-switch .checked="${this._config.show_next_only === true}" .configValue="${"show_next_only"}" @change="${this._toggleOption}"></ha-switch><span>${t.next_only}</span></div>
-          <div class="switch-row"><ha-switch .checked="${this._config.only_today !== false}" .configValue="${"only_today"}" @change="${this._toggleOption}"></ha-switch><span>${t.hide_finished}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.only_today === true}" .configValue="${"only_today"}" @change="${this._toggleOption}"></ha-switch><span>${t.hide_finished}</span></div>
           <p class="help-text">${t.hide_finished_help}</p>
           <div class="switch-row"><ha-switch .checked="${this._config.show_record === true}" .configValue="${"show_record"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_sun}</span></div>
         </div>
@@ -182,7 +182,7 @@ class CompactTeamTracker extends LitElement {
   }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
@@ -204,7 +204,7 @@ class CompactTeamTracker extends LitElement {
 
     const states = entities
       .map(id => this.hass.states[id])
-      .filter(s => s && s.attributes && s.attributes.team_abbr); // Validierung der Team-Tracker Struktur
+      .filter(s => s && s.attributes && s.attributes.team_abbr);
 
     if (states.length === 0) {
        return html`<ha-card style="padding: 16px; text-align: center; opacity: 0.5;">(Warte auf Sensordaten...)</ha-card>`;
@@ -233,7 +233,8 @@ class CompactTeamTracker extends LitElement {
 
     const todayStr = new Date().toISOString().split('T')[0];
     let filteredList = uniqueStates.filter(s => {
-      if (this.config.only_today !== false && s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
+      // Nur ausblenden, wenn die Option explizit auf true gesetzt wurde
+      if (this.config.only_today === true && s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
       return true;
     });
 

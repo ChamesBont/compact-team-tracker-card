@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.4 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.5 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -233,7 +233,6 @@ class CompactTeamTracker extends LitElement {
 
     const todayStr = new Date().toISOString().split('T')[0];
     let filteredList = uniqueStates.filter(s => {
-      // Nur ausblenden, wenn die Option explizit auf true gesetzt wurde
       if (this.config.only_today === true && s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
       return true;
     });
@@ -378,4 +377,9 @@ class CompactTeamTracker extends LitElement {
 
 customElements.define("compact-team-tracker", CompactTeamTracker);
 window.customCards = window.customCards || [];
-window.customCards.push({ type: "compact-team-tracker", name: "Compact Team Tracker", preview: true });
+window.customCards.push({ 
+  type: "compact-team-tracker", 
+  name: "Compact Team Tracker", 
+  description: "A compact card for sports tracking",
+  preview: true 
+});

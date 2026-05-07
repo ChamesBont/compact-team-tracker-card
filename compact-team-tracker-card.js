@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.10 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.5 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -59,21 +59,14 @@ class CompactTeamTrackerEditor extends LitElement {
   static get properties() { return { hass: {}, _config: {} }; }
   
   setConfig(config) {
-    // Tiefe Kopie erstellen, um "not extensible" Fehler zu vermeiden
+    // Tiefe Kopie, um "Object is not extensible" Fehler zu vermeiden
     this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = this._config.entity ? [this._config.entity] : [];
   }
 
   get _lang() {
-    return LANG[this.hass?.language] || LANG['en'];
-  }
-
-  // Lockerer Filter für Sport-Sensoren
-  _filterEntity(stateObj) {
-    if (!stateObj) return false;
-    const attr = stateObj.attributes?.attribution || "";
-    const id = stateObj.entity_id || "";
-    return attr.toLowerCase().includes("espn") || id.includes("team_tracker") || id.includes("sport");
+    const l = this.hass?.language || 'de';
+    return LANG[l] || LANG['en'];
   }
 
   render() {
@@ -91,7 +84,6 @@ class CompactTeamTrackerEditor extends LitElement {
                 .hass="${this.hass}" 
                 .value="${ent}" 
                 .includeDomains="${["sensor"]}" 
-                .entityFilter="${(s) => this._filterEntity(s)}"
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
               </ha-entity-picker>
@@ -102,7 +94,6 @@ class CompactTeamTrackerEditor extends LitElement {
             .label="${t.add_team}" 
             .hass="${this.hass}" 
             .includeDomains="${["sensor"]}" 
-            .entityFilter="${(s) => this._filterEntity(s)}"
             @value-changed="${this._addEntity}"
             allow-custom-entity>
           </ha-entity-picker>
@@ -115,7 +106,6 @@ class CompactTeamTrackerEditor extends LitElement {
             .hass="${this.hass}" 
             .value="${this._config.priority_entity || ''}" 
             .includeDomains="${["sensor"]}" 
-            .entityFilter="${(s) => this._filterEntity(s)}"
             @value-changed="${this._prioChanged}" 
             allow-custom-entity>
           </ha-entity-picker>
@@ -143,22 +133,35 @@ class CompactTeamTrackerEditor extends LitElement {
       </div>
     `;
   }
+
   _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
   _toggleOption(ev) { this._updateConfig({ ...this._config, [ev.target.configValue]: ev.target.checked }); }
+  
   _entityChanged(idx, ev) {
     const newEntities = [...this._config.entities];
     newEntities[idx] = ev.detail.value;
     this._updateConfig({ ...this._config, entities: newEntities });
   }
+
   _addEntity(ev) {
     if (!ev.detail.value) return;
     const newEnts = [...this._config.entities, ev.detail.value];
     this._updateConfig({ ...this._config, entities: newEnts });
     ev.target.value = "";
   }
-  _removeEntity(idx) { this._updateConfig({ ...this._config, entities: this._config.entities.filter((_, i) => i !== idx) }); }
-  _prioChanged(ev) { this._updateConfig({ ...this._config, priority_entity: ev.detail.value }); }
-  _updateConfig(newConfig) { this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true })); }
+
+  _removeEntity(idx) {
+    const newEntities = this._config.entities.filter((_, i) => i !== idx);
+    this._updateConfig({ ...this._config, entities: newEntities });
+  }
+
+  _prioChanged(ev) {
+    this._updateConfig({ ...this._config, priority_entity: ev.detail.value });
+  }
+
+  _updateConfig(newConfig) {
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true }));
+  }
   
   static get styles() { return css`
     .card-config { padding: 4px; }
@@ -357,6 +360,8 @@ class CompactTeamTracker extends LitElement {
 }
 
 customElements.define("compact-team-tracker", CompactTeamTracker);
+
+// --- REGISTRIERUNG ---
 window.customCards = window.customCards || [];
 window.customCards.push({ 
   type: "compact-team-tracker", 

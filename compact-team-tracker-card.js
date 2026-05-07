@@ -1,17 +1,8 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.5 - AUTO-COMPONENT-LOADER !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.6 - CARD-HELPERS FIX !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
 const css = LitElement.prototype.css;
-
-// Hilfsfunktion: Zwingt HA, die internen Picker-Elemente zu registrieren
-const HELPERS = window.loadCardHelpers ? window.loadCardHelpers() : undefined;
-async function forceLoadPicker() {
-  if (!customElements.get("ha-entity-picker")) {
-    const cardHelpers = await window.loadCardHelpers();
-    cardHelpers.createCardElement({ type: "entities", entities: [] });
-  }
-}
 
 // --- ÜBERSETZUNGEN ---
 const LANG = {
@@ -70,7 +61,11 @@ class CompactTeamTrackerEditor extends LitElement {
   async setConfig(config) {
     this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = [];
-    await forceLoadPicker(); // Zwinge HA die Komponenten zu laden
+
+    // Lade Card-Helpers, um sicherzustellen, dass ha-entity-picker registriert ist
+    if (window.loadCardHelpers) {
+      this._helpers = await window.loadCardHelpers();
+    }
   }
 
   get _lang() {
@@ -78,7 +73,7 @@ class CompactTeamTrackerEditor extends LitElement {
   }
 
   render() {
-    if (!this.hass || !this._config) return html``;
+    if (!this.hass || !this._config) return html`<div>Lade Konfiguration...</div>`;
     const t = this._lang;
 
     return html`
@@ -112,13 +107,21 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.layout_section}</div>
         <div class="config-box">
-          <div class="switch-row"><ha-switch .checked=${this._config.layout === 'ultra'} @change=${this._toggleLayout}></ha-switch><span>${t.ultra_layout}</span></div>
+          <div class="switch-row">
+            <ha-switch .checked=${this._config.layout === 'ultra'} @change=${this._toggleLayout}></ha-switch>
+            <span>${t.ultra_layout}</span>
+          </div>
+          <div class="switch-row">
+            <ha-switch .checked=${this._config.show_league !== false} .configValue=${"show_league"} @change=${this._toggleOption}></ha-switch>
+            <span>${t.show_league}</span>
+          </div>
         </div>
       </div>
     `;
   }
 
   _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
+  _toggleOption(ev) { this._updateConfig({ ...this._config, [ev.target.configValue]: ev.target.checked }); }
   
   _entityChanged(idx, ev) {
     if (!ev.detail.value) return;
@@ -146,13 +149,13 @@ class CompactTeamTrackerEditor extends LitElement {
   }
 
   static get styles() { return css`
-    .card-config { padding: 4px; }
+    .card-config { padding: 8px; }
     .section-title { font-weight: bold; font-size: 12px; margin: 16px 0 8px; color: var(--secondary-text-color); text-transform: uppercase; }
     .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
     .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     ha-entity-picker { flex-grow: 1; }
     .delete-icon { cursor: pointer; color: var(--error-color); }
-    .switch-row { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+    .switch-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; }
     .add-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(128, 128, 128, 0.1); }
   `; }
 }
@@ -167,9 +170,16 @@ class CompactTeamTracker extends LitElement {
 
   render() {
     if (!this.hass || !this.config) return html``;
+    const t = LANG[this.hass.language] || LANG['en'];
     const entities = this.config.entities || [];
-    if (entities.length === 0) return html`<ha-card style="padding: 16px; text-align: center;">Bitte Teams im Editor hinzufügen.</ha-card>`;
-    return html`<ha-card style="padding: 16px; text-align: center;">${entities.length} Teams konfiguriert.</ha-card>`;
+    
+    if (entities.length === 0) return html`<ha-card style="padding: 16px; text-align: center;">${t.no_entities}</ha-card>`;
+
+    const states = entities.map(id => this.hass.states[id]).filter(s => s && s.attributes && s.attributes.team_abbr);
+    if (states.length === 0) return html`<ha-card style="padding: 16px; text-align: center;">(Warte auf Daten...)</ha-card>`;
+
+    // ... (Hier folgt deine restliche Render-Logik aus v2.0.6-beta.4)
+    return html`<ha-card style="padding: 16px; text-align: center;">${entities.length} Teams geladen.</ha-card>`;
   }
 }
 customElements.define("compact-team-tracker", CompactTeamTracker);
@@ -178,5 +188,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({ 
   type: "compact-team-tracker", 
   name: "Compact Team Tracker", 
+  description: "A compact card for sports tracking",
   preview: true 
 });

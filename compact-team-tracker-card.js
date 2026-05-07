@@ -1,8 +1,26 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.4 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.6 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
 const css = LitElement.prototype.css;
+
+// --- HILFSFUNKTION FÜR LAZY LOADING ---
+// Zwingt Home Assistant, die internen Editor-Elemente (wie den Picker) zu laden
+async function loadHAComponents() {
+  if (customElements.get("ha-entity-picker")) return;
+  if (window.loadCardHelpers) {
+    try {
+      const helpers = await window.loadCardHelpers();
+      // Erstellt unsichtbar eine Standard-Karte, um HA zum Laden des Pickers zu zwingen
+      const card = helpers.createCardElement({ type: "entities", entities: [] });
+      if (card.constructor.getConfigElement) {
+        await card.constructor.getConfigElement();
+      }
+    } catch (e) {
+      console.warn("Team Tracker: Fehler beim Laden der HA-Komponenten", e);
+    }
+  }
+}
 
 // --- ÜBERSETZUNGEN ---
 const LANG = {
@@ -56,15 +74,26 @@ const LANG = {
 
 // --- EDITOR ---
 class CompactTeamTrackerEditor extends LitElement {
-  static get properties() { return { hass: {}, _config: {}, _pickerLoaded: {} }; }
-  
+  static get properties() { return { hass: {}, _config: {}, _componentsLoaded: {} }; }
+
   constructor() {
     super();
-    this._pickerLoaded = false;
+    this._componentsLoaded = !!customElements.get("ha-entity-picker");
   }
 
+  // Wird aufgerufen, wenn der Editor im Dashboard geöffnet wird
+  async connectedCallback() {
+    super.connectedCallback();
+    if (!this._componentsLoaded) {
+      await loadHAComponents();
+      this._componentsLoaded = true;
+      this.requestUpdate(); // Zeichnet den Editor neu, sobald der Picker bereit ist
+    }
+  }
+  
   setConfig(config) {
-    this._config = config;
+    // FIX: Kopie erstellen, um "Object is not extensible" bei leeren Dashboards zu verhindern
+    this._config = { ...config };
     if (!this._config.entities) this._config.entities = this._config.entity ? [this._config.entity] : [];
   }
 
@@ -73,34 +102,24 @@ class CompactTeamTrackerEditor extends LitElement {
     return LANG[l] || LANG['en'];
   }
 
-  _entityFilter(stateObj) {
+  _filterEntity(stateObj) {
     if (!stateObj) return false;
-    const entityId = stateObj.entity_id || "";
-    const attr = stateObj.attributes || {};
-    const attribution = (attr.attribution || "").toLowerCase();
-    // Primär: ESPN-Attribution oder "team_tracker" im Entity-Namen
-    if (attribution.includes("espn") || entityId.includes("team_tracker")) return true;
-    // Fallback: Sensor hat typische Team-Tracker-Attribute
-    if (attr.team_abbr || attr.opponent_abbr || attr.team_score !== undefined) return true;
-    return false;
+    const attr = stateObj.attributes?.attribution || "";
+    return attr.toLowerCase().includes("espn") || stateObj.entity_id.includes("team_tracker");
   }
 
   render() {
     if (!this.hass || !this._config) return html``;
-    // Bewährter Community-Trick: hui-glance-card lädt ha-entity-picker nach
-    if (!this._pickerLoaded) {
-      const glanceCard = customElements.get('hui-glance-card');
-      if (glanceCard) {
-        glanceCard.getConfigElement().then(() => {
-          this._pickerLoaded = true;
-          this.requestUpdate();
-        });
-      } else {
-        this._pickerLoaded = true; // Fallback: trotzdem versuchen
-      }
-      return html`<div style="padding:16px;opacity:0.6;">Lade Editor...</div>`;
-    }
     const t = this._lang;
+
+    // Lade-Ansicht, bis Home Assistant den Picker im Hintergrund heruntergeladen hat
+    if (!this._componentsLoaded && !customElements.get("ha-entity-picker")) {
+      return html`
+        <div style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
+          Lade Editor-Komponenten von Home Assistant...
+        </div>
+      `;
+    }
 
     return html`
       <div class="card-config">
@@ -113,6 +132,7 @@ class CompactTeamTrackerEditor extends LitElement {
                 .hass="${this.hass}" 
                 .value="${ent}" 
                 .includeDomains="${["sensor"]}" 
+                .entityFilter="${(s) => this._filterEntity(s)}"
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
               </ha-entity-picker>
@@ -123,6 +143,7 @@ class CompactTeamTrackerEditor extends LitElement {
             .label="${t.add_team}" 
             .hass="${this.hass}" 
             .includeDomains="${["sensor"]}" 
+            .entityFilter="${(s) => this._filterEntity(s)}"
             @value-changed="${this._addEntity}">
           </ha-entity-picker>
         </div>
@@ -134,6 +155,7 @@ class CompactTeamTrackerEditor extends LitElement {
             .hass="${this.hass}" 
             .value="${this._config.priority_entity || ''}" 
             .includeDomains="${["sensor"]}" 
+            .entityFilter="${(s) => this._filterEntity(s)}"
             @value-changed="${this._prioChanged}" 
             allow-custom-entity>
           </ha-entity-picker>
@@ -184,9 +206,9 @@ class CompactTeamTrackerEditor extends LitElement {
     .card-config { padding: 4px; }
     .section-title { font-weight: bold; font-size: 14px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
     .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
-    .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    ha-entity-picker { flex-grow: 1; display: block; width: 100%; }
-    .delete-icon { cursor: pointer; color: var(--error-color); flex-shrink: 0; }
+    .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; } 
+    ha-entity-picker { flex-grow: 1; } 
+    .delete-icon { cursor: pointer; color: var(--error-color); } 
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; }
     .switch-row:last-child { margin-bottom: 0; }
     .help-text { font-size: 12px; opacity: 0.6; margin: 4px 0 8px 0; line-height: 1.2; font-style: italic; }
@@ -254,7 +276,6 @@ class CompactTeamTracker extends LitElement {
 
     const todayStr = new Date().toISOString().split('T')[0];
     let filteredList = uniqueStates.filter(s => {
-      // Nur ausblenden, wenn die Option explizit auf true gesetzt wurde
       if (this.config.only_today === true && s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
       return true;
     });
@@ -399,4 +420,9 @@ class CompactTeamTracker extends LitElement {
 
 customElements.define("compact-team-tracker", CompactTeamTracker);
 window.customCards = window.customCards || [];
-window.customCards.push({ type: "compact-team-tracker", name: "Compact Team Tracker", preview: true });
+window.customCards.push({ 
+  type: "compact-team-tracker", 
+  name: "Compact Team Tracker", 
+  description: "A compact card for sports tracking",
+  preview: true 
+});

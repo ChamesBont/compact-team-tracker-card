@@ -1,8 +1,17 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.5 - LAZY LOAD FIX !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.5 - AUTO-COMPONENT-LOADER !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
 const css = LitElement.prototype.css;
+
+// Hilfsfunktion: Zwingt HA, die internen Picker-Elemente zu registrieren
+const HELPERS = window.loadCardHelpers ? window.loadCardHelpers() : undefined;
+async function forceLoadPicker() {
+  if (!customElements.get("ha-entity-picker")) {
+    const cardHelpers = await window.loadCardHelpers();
+    cardHelpers.createCardElement({ type: "entities", entities: [] });
+  }
+}
 
 // --- ÜBERSETZUNGEN ---
 const LANG = {
@@ -24,7 +33,7 @@ const LANG = {
     show_last_play: "Letzten Spielzug anzeigen",
     last_play_help: "Zeigt bei Live-Spielen eine Textzusammenfassung des letzten Spielzugs an.",
     last_play_marquee: "Lauftext für letzten Spielzug nutzen",
-    no_entities: "Bitte füge Teams hinzu (TeamTracker Integration erforderlich).",
+    no_entities: "Bitte füge in der Konfiguration Teams hinzu, um die Vorschau zu sehen.",
     scheduled: "Geplant",
     finished: "Beendet",
     live: "LIVE"
@@ -47,7 +56,7 @@ const LANG = {
     show_last_play: "Show last play",
     last_play_help: "Displays a text summary of the most recent play during live games.",
     last_play_marquee: "Use marquee for last play",
-    no_entities: "Please add teams (TeamTracker integration required).",
+    no_entities: "Please add teams in the configuration to see the preview.",
     scheduled: "Scheduled",
     finished: "Finished",
     live: "LIVE"
@@ -58,30 +67,26 @@ const LANG = {
 class CompactTeamTrackerEditor extends LitElement {
   static get properties() { return { hass: {}, _config: {} }; }
   
-  setConfig(config) {
+  async setConfig(config) {
     this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = [];
+    await forceLoadPicker(); // Zwinge HA die Komponenten zu laden
   }
 
-  // WICHTIG: Erzwingt Update, sobald HASS geladen ist
-  set hass(hass) {
-    this._hass = hass;
-    if (this._hass) this.requestUpdate();
+  get _lang() {
+    return LANG[this.hass?.language] || LANG['en'];
   }
-  get hass() { return this._hass; }
 
   render() {
-    if (!this.hass || !this._config) {
-      return html`<div style="padding: 20px; text-align: center;">Initialisiere Komponenten...</div>`;
-    }
-    const t = LANG[this.hass.language] || LANG['en'];
+    if (!this.hass || !this._config) return html``;
+    const t = this._lang;
 
     return html`
       <div class="card-config">
         <div class="section-title">${t.manage_teams}</div>
         <div class="config-box">
           ${this._config.entities.map((ent, idx) => html`
-            <div class="entity-row" key="${idx}">
+            <div class="entity-row" key="row-${idx}">
               <ha-entity-picker 
                 .hass=${this.hass} 
                 .value=${ent} 
@@ -107,19 +112,14 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.layout_section}</div>
         <div class="config-box">
-          <div class="switch-row">
-            <ha-switch .checked=${this._config.layout === 'ultra'} @change=${this._toggleLayout}></ha-switch>
-            <span>${t.ultra_layout}</span>
-          </div>
+          <div class="switch-row"><ha-switch .checked=${this._config.layout === 'ultra'} @change=${this._toggleLayout}></ha-switch><span>${t.ultra_layout}</span></div>
         </div>
       </div>
     `;
   }
 
-  _toggleLayout(ev) {
-    this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' });
-  }
-
+  _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
+  
   _entityChanged(idx, ev) {
     if (!ev.detail.value) return;
     const newEntities = [...this._config.entities];
@@ -146,14 +146,14 @@ class CompactTeamTrackerEditor extends LitElement {
   }
 
   static get styles() { return css`
-    .card-config { padding: 8px; }
-    .section-title { font-weight: bold; font-size: 12px; margin-bottom: 8px; color: var(--secondary-text-color); text-transform: uppercase; }
-    .config-box { background: var(--secondary-background-color); padding: 12px; border-radius: 8px; border: 1px solid var(--divider-color); }
+    .card-config { padding: 4px; }
+    .section-title { font-weight: bold; font-size: 12px; margin: 16px 0 8px; color: var(--secondary-text-color); text-transform: uppercase; }
+    .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
     .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     ha-entity-picker { flex-grow: 1; }
     .delete-icon { cursor: pointer; color: var(--error-color); }
-    .switch-row { display: flex; align-items: center; gap: 12px; }
-    .add-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--divider-color); }
+    .switch-row { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+    .add-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(128, 128, 128, 0.1); }
   `; }
 }
 customElements.define("compact-team-tracker-editor", CompactTeamTrackerEditor);
@@ -163,13 +163,13 @@ class CompactTeamTracker extends LitElement {
   static get properties() { return { hass: {}, config: {} }; }
   setConfig(config) { this.config = config; }
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard" }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false }; }
 
   render() {
     if (!this.hass || !this.config) return html``;
     const entities = this.config.entities || [];
-    if (entities.length === 0) return html`<ha-card style="padding:16px;">Bitte Teams im Editor hinzufügen.</ha-card>`;
-    return html`<ha-card style="padding:16px;">${entities.length} Teams konfiguriert.</ha-card>`;
+    if (entities.length === 0) return html`<ha-card style="padding: 16px; text-align: center;">Bitte Teams im Editor hinzufügen.</ha-card>`;
+    return html`<ha-card style="padding: 16px; text-align: center;">${entities.length} Teams konfiguriert.</ha-card>`;
   }
 }
 customElements.define("compact-team-tracker", CompactTeamTracker);

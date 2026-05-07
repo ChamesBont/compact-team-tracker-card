@@ -1,10 +1,10 @@
-console.log("!!! TEAM TRACKER v2.0.8-beta.8 !!!");
+console.log("!!! TEAM TRACKER v2.0.8-beta.9 !!!");
 
 const LitElement = customElements.get("ha-panel-lovelace");
 const html = LitElement.prototype.html;
 const css = LitElement.prototype.css;
 
-// --- ÜBERSETZUNGEN ---
+// --- TRANSLATIONS ---
 const LANG = {
   de: {
     manage_teams: "Teams verwalten",
@@ -17,22 +17,22 @@ const LANG = {
     ultra_layout: "Ultra-Compact-Layout",
     show_league: "Kopfzeile anzeigen",
     match_info_section: "Spiel-Informationen",
-    next_only: "Nur das nächste/aktuelle Spiel anzeigen",
+    next_only: "Nur nächstes/aktuelles Spiel anzeigen",
     hide_finished: "Beendete Spiele ausblenden",
     hide_finished_help:
-      "Versteckt Spiele vom Vortag automatisch um Mitternacht.",
-    show_sun: "Statistiken (S-U-N) anzeigen",
+      "Blendet Spiele vom Vortag automatisch aus.",
+    show_sun: "Statistik anzeigen (S-U-N)",
     live_details_section: "Live-Details",
     show_last_play: "Letzten Spielzug anzeigen",
     last_play_help:
-      "Zeigt bei Live-Spielen eine Textzusammenfassung des letzten Spielzugs an.",
-    last_play_marquee: "Lauftext für letzten Spielzug nutzen",
+      "Zeigt eine Textzusammenfassung des letzten Spielzugs.",
+    last_play_marquee: "Lauftext für letzten Spielzug",
     no_entities:
-      "Bitte füge in der Konfiguration Teams hinzu, um die Vorschau zu sehen.",
-    scheduled: "Geplant",
+      "Bitte Teams hinzufügen, um eine Vorschau zu sehen.",
     finished: "Beendet",
     live: "LIVE",
   },
+
   en: {
     manage_teams: "Manage Teams",
     add_team: "Add new team...",
@@ -47,23 +47,26 @@ const LANG = {
     next_only: "Show only next/current match",
     hide_finished: "Hide finished matches",
     hide_finished_help:
-      "Automatically hides matches from previous days at midnight.",
+      "Automatically hides previous matches.",
     show_sun: "Show statistics (W-D-L)",
     live_details_section: "Live Details",
     show_last_play: "Show last play",
     last_play_help:
-      "Displays a text summary of the most recent play during live games.",
+      "Displays a summary of the most recent play.",
     last_play_marquee: "Use marquee for last play",
     no_entities:
-      "Please add teams in the configuration to see the preview.",
-    scheduled: "Scheduled",
+      "Please add teams to see a preview.",
     finished: "Finished",
     live: "LIVE",
   },
 };
 
-// --- EDITOR ---
+// =====================================================
+// EDITOR
+// =====================================================
+
 class CompactTeamTrackerEditor extends LitElement {
+
   static get properties() {
     return {
       hass: {},
@@ -72,15 +75,16 @@ class CompactTeamTrackerEditor extends LitElement {
   }
 
   setConfig(config) {
+
     this._config = {
+      entities: [],
       layout: "standard",
       show_league: true,
+      show_next_only: false,
       only_today: false,
       show_record: false,
       show_last_play: true,
       last_play_marquee: false,
-      show_next_only: false,
-      entities: [],
       ...config,
     };
 
@@ -88,7 +92,9 @@ class CompactTeamTrackerEditor extends LitElement {
       !this._config.entities &&
       this._config.entity
     ) {
-      this._config.entities = [this._config.entity];
+      this._config.entities = [
+        this._config.entity,
+      ];
     }
   }
 
@@ -97,162 +103,211 @@ class CompactTeamTrackerEditor extends LitElement {
     return LANG[l] || LANG["en"];
   }
 
-  _entityFilter = (stateObj) => {
-    return (
-      stateObj?.entity_id?.startsWith("sensor.") &&
-      stateObj.attributes?.team_abbr
-    );
-  };
-
   render() {
-    if (!this.hass || !this._config) return html``;
+
+    if (!this.hass || !this._config) {
+      return html``;
+    }
 
     const t = this._lang;
 
     return html`
+
       <div class="card-config">
 
-        <div class="section-title">${t.manage_teams}</div>
+        <!-- TEAMS -->
+
+        <div class="section-title">
+          ${t.manage_teams}
+        </div>
 
         <div class="config-box">
 
           ${this._config.entities.map(
             (ent, idx) => html`
+
               <div class="entity-row">
 
-                <ha-entity-picker
+                <hui-entity-picker
                   .hass=${this.hass}
                   .value=${ent}
                   .label=${`Team ${idx + 1}`}
                   .includeDomains=${["sensor"]}
-                  .entityFilter=${this._entityFilter}
-                  allow-custom-entity
                   @value-changed=${(ev) =>
                     this._entityChanged(idx, ev)}
                 >
-                </ha-entity-picker>
+                </hui-entity-picker>
 
                 <ha-icon
                   icon="mdi:delete"
                   class="delete-icon"
-                  @click=${() => this._removeEntity(idx)}
-                ></ha-icon>
+                  @click=${() =>
+                    this._removeEntity(idx)}
+                >
+                </ha-icon>
 
               </div>
             `
           )}
 
-          <ha-entity-picker
+          <hui-entity-picker
             .hass=${this.hass}
             .label=${t.add_team}
             .includeDomains=${["sensor"]}
-            .entityFilter=${this._entityFilter}
             @value-changed=${this._addEntity}
           >
-          </ha-entity-picker>
+          </hui-entity-picker>
 
         </div>
 
-        <div class="section-title">${t.priority_label}</div>
+        <!-- PRIORITY -->
+
+        <div class="section-title">
+          ${t.priority_label}
+        </div>
 
         <div class="config-box">
 
-          <ha-entity-picker
+          <hui-entity-picker
             .hass=${this.hass}
             .value=${this._config.priority_entity || ""}
             .label=${t.prio_picker}
             .includeDomains=${["sensor"]}
-            .entityFilter=${this._entityFilter}
-            allow-custom-entity
             @value-changed=${this._prioChanged}
           >
-          </ha-entity-picker>
+          </hui-entity-picker>
 
-          <p class="help-text">${t.prio_help}</p>
+          <p class="help-text">
+            ${t.prio_help}
+          </p>
 
         </div>
 
-        <div class="section-title">${t.layout_section}</div>
+        <!-- APPEARANCE -->
+
+        <div class="section-title">
+          ${t.layout_section}
+        </div>
 
         <div class="config-box">
 
           <div class="switch-row">
+
             <ha-switch
               .checked=${this._config.layout === "ultra"}
               .configValue=${"layout"}
               @change=${this._toggleLayout}
-            ></ha-switch>
+            >
+            </ha-switch>
+
             <span>${t.ultra_layout}</span>
+
           </div>
 
           <div class="switch-row">
+
             <ha-switch
               .checked=${this._config.show_league !== false}
               .configValue=${"show_league"}
               @change=${this._toggleOption}
-            ></ha-switch>
+            >
+            </ha-switch>
+
             <span>${t.show_league}</span>
+
           </div>
 
         </div>
 
-        <div class="section-title">${t.match_info_section}</div>
+        <!-- MATCH INFO -->
+
+        <div class="section-title">
+          ${t.match_info_section}
+        </div>
 
         <div class="config-box">
 
           <div class="switch-row">
+
             <ha-switch
               .checked=${this._config.show_next_only === true}
               .configValue=${"show_next_only"}
               @change=${this._toggleOption}
-            ></ha-switch>
+            >
+            </ha-switch>
+
             <span>${t.next_only}</span>
+
           </div>
 
           <div class="switch-row">
+
             <ha-switch
               .checked=${this._config.only_today === true}
               .configValue=${"only_today"}
               @change=${this._toggleOption}
-            ></ha-switch>
+            >
+            </ha-switch>
+
             <span>${t.hide_finished}</span>
+
           </div>
 
-          <p class="help-text">${t.hide_finished_help}</p>
+          <p class="help-text">
+            ${t.hide_finished_help}
+          </p>
 
           <div class="switch-row">
+
             <ha-switch
               .checked=${this._config.show_record === true}
               .configValue=${"show_record"}
               @change=${this._toggleOption}
-            ></ha-switch>
+            >
+            </ha-switch>
+
             <span>${t.show_sun}</span>
+
           </div>
 
         </div>
 
-        <div class="section-title">${t.live_details_section}</div>
+        <!-- LIVE -->
+
+        <div class="section-title">
+          ${t.live_details_section}
+        </div>
 
         <div class="config-box">
 
           <div class="switch-row">
+
             <ha-switch
               .checked=${this._config.show_last_play !== false}
               .configValue=${"show_last_play"}
               @change=${this._toggleOption}
-            ></ha-switch>
+            >
+            </ha-switch>
+
             <span>${t.show_last_play}</span>
+
           </div>
 
-          <p class="help-text">${t.last_play_help}</p>
+          <p class="help-text">
+            ${t.last_play_help}
+          </p>
 
           <div class="switch-row">
+
             <ha-switch
               .checked=${this._config.last_play_marquee === true}
               .configValue=${"last_play_marquee"}
               @change=${this._toggleOption}
-            ></ha-switch>
+            >
+            </ha-switch>
+
             <span>${t.last_play_marquee}</span>
+
           </div>
 
         </div>
@@ -261,74 +316,104 @@ class CompactTeamTrackerEditor extends LitElement {
     `;
   }
 
+  // =====================================================
+  // ACTIONS
+  // =====================================================
+
   _toggleLayout(ev) {
+
     this._updateConfig({
       ...this._config,
-      layout: ev.target.checked ? "ultra" : "standard",
+      layout: ev.target.checked
+        ? "ultra"
+        : "standard",
     });
   }
 
   _toggleOption(ev) {
+
     this._updateConfig({
       ...this._config,
-      [ev.target.configValue]: ev.target.checked,
+      [ev.target.configValue]:
+        ev.target.checked,
     });
   }
 
   _entityChanged(idx, ev) {
-    const newEntities = [...this._config.entities];
-    newEntities[idx] = ev.detail.value;
+
+    const entities = [
+      ...this._config.entities,
+    ];
+
+    entities[idx] = ev.detail.value;
 
     this._updateConfig({
       ...this._config,
-      entities: newEntities,
+      entities,
     });
   }
 
   _addEntity(ev) {
-    if (!ev.detail.value) return;
 
-    const newEntities = [
+    if (!ev.detail.value) {
+      return;
+    }
+
+    const entities = [
       ...(this._config.entities || []),
       ev.detail.value,
     ];
 
     this._updateConfig({
       ...this._config,
-      entities: newEntities,
+      entities,
     });
 
     ev.target.value = "";
   }
 
   _removeEntity(idx) {
+
     this._updateConfig({
       ...this._config,
-      entities: this._config.entities.filter(
-        (_, i) => i !== idx
-      ),
+      entities:
+        this._config.entities.filter(
+          (_, i) => i !== idx
+        ),
     });
   }
 
   _prioChanged(ev) {
+
     this._updateConfig({
       ...this._config,
-      priority_entity: ev.detail.value,
+      priority_entity:
+        ev.detail.value,
     });
   }
 
-  _updateConfig(newConfig) {
+  _updateConfig(config) {
+
     this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        detail: { config: newConfig },
-        bubbles: true,
-        composed: true,
-      })
+      new CustomEvent(
+        "config-changed",
+        {
+          detail: { config },
+          bubbles: true,
+          composed: true,
+        }
+      )
     );
   }
 
+  // =====================================================
+  // STYLES
+  // =====================================================
+
   static get styles() {
+
     return css`
+
       .card-config {
         padding: 4px;
       }
@@ -343,10 +428,10 @@ class CompactTeamTrackerEditor extends LitElement {
       }
 
       .config-box {
-        background: rgba(128, 128, 128, 0.05);
+        background: rgba(128,128,128,0.05);
         padding: 12px;
         border-radius: 8px;
-        border: 1px solid rgba(128, 128, 128, 0.1);
+        border: 1px solid rgba(128,128,128,0.1);
       }
 
       .entity-row {
@@ -356,7 +441,7 @@ class CompactTeamTrackerEditor extends LitElement {
         margin-bottom: 12px;
       }
 
-      ha-entity-picker {
+      hui-entity-picker {
         flex-grow: 1;
       }
 
@@ -381,6 +466,7 @@ class CompactTeamTrackerEditor extends LitElement {
         line-height: 1.2;
         font-style: italic;
       }
+
     `;
   }
 }

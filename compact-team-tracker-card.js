@@ -1,10 +1,14 @@
 console.log("!!! TEAM TRACKER v2.0.8-beta.9 !!!");
 
-const LitElement = customElements.get("ha-panel-lovelace");
-const html = LitElement.prototype.html;
-const css = LitElement.prototype.css;
+const LitElementBase = customElements.get("ha-panel-lovelace");
 
-// --- TRANSLATIONS ---
+const html = LitElementBase.prototype.html;
+const css = LitElementBase.prototype.css;
+
+// =====================================================
+// TRANSLATIONS
+// =====================================================
+
 const LANG = {
   de: {
     manage_teams: "Teams verwalten",
@@ -12,23 +16,19 @@ const LANG = {
     priority_label: "Priorität",
     prio_picker: "Haupt-Sensor auswählen",
     prio_help:
-      "Dieses Team wird bevorzugt, falls mehrere Spiele zur exakt gleichen Zeit starten.",
+      "Dieses Team wird bevorzugt, falls mehrere Spiele gleichzeitig starten.",
     layout_section: "Erscheinungsbild",
     ultra_layout: "Ultra-Compact-Layout",
     show_league: "Kopfzeile anzeigen",
     match_info_section: "Spiel-Informationen",
     next_only: "Nur nächstes/aktuelles Spiel anzeigen",
     hide_finished: "Beendete Spiele ausblenden",
-    hide_finished_help:
-      "Blendet Spiele vom Vortag automatisch aus.",
-    show_sun: "Statistik anzeigen (S-U-N)",
+    show_sun: "Statistik anzeigen",
     live_details_section: "Live-Details",
     show_last_play: "Letzten Spielzug anzeigen",
-    last_play_help:
-      "Zeigt eine Textzusammenfassung des letzten Spielzugs.",
-    last_play_marquee: "Lauftext für letzten Spielzug",
+    last_play_marquee: "Lauftext nutzen",
     no_entities:
-      "Bitte Teams hinzufügen, um eine Vorschau zu sehen.",
+      "Bitte Teams hinzufügen.",
     finished: "Beendet",
     live: "LIVE",
   },
@@ -39,23 +39,19 @@ const LANG = {
     priority_label: "Priority",
     prio_picker: "Select main sensor",
     prio_help:
-      "This team will be preferred if multiple games start at the exact same time.",
+      "Preferred team if games start simultaneously.",
     layout_section: "Appearance",
-    ultra_layout: "Ultra-compact layout",
-    show_league: "Show card header",
-    match_info_section: "Match Information",
-    next_only: "Show only next/current match",
+    ultra_layout: "Ultra compact layout",
+    show_league: "Show header",
+    match_info_section: "Match information",
+    next_only: "Show next/current only",
     hide_finished: "Hide finished matches",
-    hide_finished_help:
-      "Automatically hides previous matches.",
-    show_sun: "Show statistics (W-D-L)",
-    live_details_section: "Live Details",
+    show_sun: "Show statistics",
+    live_details_section: "Live details",
     show_last_play: "Show last play",
-    last_play_help:
-      "Displays a summary of the most recent play.",
-    last_play_marquee: "Use marquee for last play",
+    last_play_marquee: "Use marquee",
     no_entities:
-      "Please add teams to see a preview.",
+      "Please add teams.",
     finished: "Finished",
     live: "LIVE",
   },
@@ -65,7 +61,7 @@ const LANG = {
 // EDITOR
 // =====================================================
 
-class CompactTeamTrackerEditor extends LitElement {
+class CompactTeamTrackerEditor extends LitElementBase {
 
   static get properties() {
     return {
@@ -115,8 +111,6 @@ class CompactTeamTrackerEditor extends LitElement {
 
       <div class="card-config">
 
-        <!-- TEAMS -->
-
         <div class="section-title">
           ${t.manage_teams}
         </div>
@@ -132,7 +126,6 @@ class CompactTeamTrackerEditor extends LitElement {
                   .hass=${this.hass}
                   .value=${ent}
                   .label=${`Team ${idx + 1}`}
-                  .includeDomains=${["sensor"]}
                   @value-changed=${(ev) =>
                     this._entityChanged(idx, ev)}
                 >
@@ -153,14 +146,11 @@ class CompactTeamTrackerEditor extends LitElement {
           <hui-entity-picker
             .hass=${this.hass}
             .label=${t.add_team}
-            .includeDomains=${["sensor"]}
             @value-changed=${this._addEntity}
           >
           </hui-entity-picker>
 
         </div>
-
-        <!-- PRIORITY -->
 
         <div class="section-title">
           ${t.priority_label}
@@ -172,7 +162,6 @@ class CompactTeamTrackerEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._config.priority_entity || ""}
             .label=${t.prio_picker}
-            .includeDomains=${["sensor"]}
             @value-changed=${this._prioChanged}
           >
           </hui-entity-picker>
@@ -182,8 +171,6 @@ class CompactTeamTrackerEditor extends LitElement {
           </p>
 
         </div>
-
-        <!-- APPEARANCE -->
 
         <div class="section-title">
           ${t.layout_section}
@@ -219,8 +206,6 @@ class CompactTeamTrackerEditor extends LitElement {
 
         </div>
 
-        <!-- MATCH INFO -->
-
         <div class="section-title">
           ${t.match_info_section}
         </div>
@@ -253,10 +238,6 @@ class CompactTeamTrackerEditor extends LitElement {
 
           </div>
 
-          <p class="help-text">
-            ${t.hide_finished_help}
-          </p>
-
           <div class="switch-row">
 
             <ha-switch
@@ -271,8 +252,6 @@ class CompactTeamTrackerEditor extends LitElement {
           </div>
 
         </div>
-
-        <!-- LIVE -->
 
         <div class="section-title">
           ${t.live_details_section}
@@ -293,10 +272,6 @@ class CompactTeamTrackerEditor extends LitElement {
 
           </div>
 
-          <p class="help-text">
-            ${t.last_play_help}
-          </p>
-
           <div class="switch-row">
 
             <ha-switch
@@ -315,10 +290,6 @@ class CompactTeamTrackerEditor extends LitElement {
       </div>
     `;
   }
-
-  // =====================================================
-  // ACTIONS
-  // =====================================================
 
   _toggleLayout(ev) {
 
@@ -355,9 +326,7 @@ class CompactTeamTrackerEditor extends LitElement {
 
   _addEntity(ev) {
 
-    if (!ev.detail.value) {
-      return;
-    }
+    if (!ev.detail.value) return;
 
     const entities = [
       ...(this._config.entities || []),
@@ -406,10 +375,6 @@ class CompactTeamTrackerEditor extends LitElement {
     );
   }
 
-  // =====================================================
-  // STYLES
-  // =====================================================
-
   static get styles() {
 
     return css`
@@ -423,15 +388,12 @@ class CompactTeamTrackerEditor extends LitElement {
         font-size: 14px;
         margin: 16px 0 8px 0;
         color: var(--secondary-text-color);
-        text-transform: uppercase;
-        letter-spacing: 1px;
       }
 
       .config-box {
         background: rgba(128,128,128,0.05);
         padding: 12px;
         border-radius: 8px;
-        border: 1px solid rgba(128,128,128,0.1);
       }
 
       .entity-row {
@@ -452,19 +414,13 @@ class CompactTeamTrackerEditor extends LitElement {
 
       .switch-row {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        gap: 12px;
         margin-bottom: 8px;
-        font-size: 14px;
       }
 
       .help-text {
         font-size: 12px;
-        opacity: 0.6;
-        margin: 4px 0 8px 0;
-        line-height: 1.2;
-        font-style: italic;
+        opacity: 0.7;
       }
 
     `;
@@ -475,3 +431,131 @@ customElements.define(
   "compact-team-tracker-editor",
   CompactTeamTrackerEditor
 );
+
+// =====================================================
+// CARD
+// =====================================================
+
+class CompactTeamTracker extends LitElementBase {
+
+  static get properties() {
+    return {
+      hass: {},
+      config: {},
+    };
+  }
+
+  setConfig(config) {
+    this.config = config;
+  }
+
+  static getConfigElement() {
+    return document.createElement(
+      "compact-team-tracker-editor"
+    );
+  }
+
+  static getStubConfig() {
+    return {
+      entities: [],
+    };
+  }
+
+  render() {
+
+    if (!this.hass) {
+      return html``;
+    }
+
+    const entities =
+      this.config.entities || [];
+
+    if (!entities.length) {
+
+      return html`
+        <ha-card style="padding:16px">
+          Keine Teams konfiguriert
+        </ha-card>
+      `;
+    }
+
+    const validStates = entities
+      .map((e) => this.hass.states[e])
+      .filter(Boolean);
+
+    return html`
+
+      <ha-card>
+
+        ${validStates.map((stateObj) => {
+
+          const a = stateObj.attributes;
+
+          return html`
+
+            <div class="match">
+
+              <div class="team">
+                ${a.team_abbr || "?"}
+              </div>
+
+              <div class="score">
+                ${a.team_score ?? "-"}
+                :
+                ${a.opponent_score ?? "-"}
+              </div>
+
+              <div class="team">
+                ${a.opponent_abbr || "?"}
+              </div>
+
+            </div>
+
+          `;
+        })}
+
+      </ha-card>
+    `;
+  }
+
+  static get styles() {
+
+    return css`
+
+      .match {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-bottom:
+          1px solid var(--divider-color);
+      }
+
+      .team {
+        font-weight: bold;
+      }
+
+      .score {
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+    `;
+  }
+}
+
+customElements.define(
+  "compact-team-tracker",
+  CompactTeamTracker
+);
+
+window.customCards =
+  window.customCards || [];
+
+window.customCards.push({
+  type: "compact-team-tracker",
+  name: "Compact Team Tracker",
+  description:
+    "Compact sports tracker card",
+  preview: true,
+});

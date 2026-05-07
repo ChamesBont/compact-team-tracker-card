@@ -1,8 +1,6 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.5 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.6 !!!");
 
-const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
-const html = LitElement.prototype.html;
-const css = LitElement.prototype.css;
+import { LitElement, html, css } from "https://unpkg.com/lit?module";
 
 // --- ÜBERSETZUNGEN ---
 const LANG = {
@@ -74,9 +72,10 @@ class CompactTeamTrackerEditor extends LitElement {
   }
 
   _filterEntity(stateObj) {
-    if (!stateObj) return false;
-    const attr = stateObj.attributes?.attribution || "";
-    return attr.toLowerCase().includes("espn") || stateObj.entity_id.includes("team_tracker");
+    return (
+      stateObj?.entity_id?.startsWith("sensor.") &&
+      stateObj.attributes?.team_abbr
+    );
   }
 
   render() {

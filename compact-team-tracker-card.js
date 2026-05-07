@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.6 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.7 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -57,7 +57,7 @@ class CompactTeamTrackerEditor extends LitElement {
   static get properties() { return { hass: {}, _config: {} }; }
   
   setConfig(config) {
-    // FIX: Erstellt eine tiefe Kopie, um "not extensible" Fehler zu vermeiden
+    // FIX: Tiefe Kopie erstellen, um Schreibschutz zu umgehen
     this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = [];
   }
@@ -173,12 +173,8 @@ class CompactTeamTracker extends LitElement {
     if (entities.length === 0) {
       return html`<ha-card style="padding: 16px; text-align: center;">${t.no_entities}</ha-card>`;
     }
-
-    const states = entities.map(id => this.hass.states[id]).filter(s => s && s.attributes && s.attributes.team_abbr);
-    if (states.length === 0) return html`<ha-card style="padding: 16px; text-align: center;">(Warte auf TeamTracker Sensoren...)</ha-card>`;
-
-    // ... (Hier folgt die restliche Render-Logik für Match & UltraMatch wie zuvor)
-    return html`<ha-card>Konfiguration OK. Sensoren gefunden: ${states.length}</ha-card>`;
+    // Hier folgt die restliche Render-Logik (Match/UltraMatch)...
+    return html`<ha-card>Vorschau aktiv für ${entities.length} Teams</ha-card>`;
   }
 }
 customElements.define("compact-team-tracker", CompactTeamTracker);

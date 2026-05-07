@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.6 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.7 !!!");
 
 import { LitElement, html, css } from "https://unpkg.com/lit?module";
 
@@ -88,7 +88,7 @@ class CompactTeamTrackerEditor extends LitElement {
         <div class="config-box">
           ${this._config.entities.map((ent, idx) => html`
             <div class="entity-row" key="${idx}">
-              <ha-entity-picker 
+              <ha-combo-box 
                 .label="${`Team ${idx + 1}`}" 
                 .hass="${this.hass}" 
                 .value="${ent}" 
@@ -96,22 +96,22 @@ class CompactTeamTrackerEditor extends LitElement {
                 .entityFilter="${(s) => this._filterEntity(s)}"
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
-              </ha-entity-picker>
+              </ha-combo-box>
               <ha-icon icon="mdi:delete" class="delete-icon" @click="${() => this._removeEntity(idx)}"></ha-icon>
             </div>
           `)}
-          <ha-entity-picker 
+          <ha-combo-box 
             .label="${t.add_team}" 
             .hass="${this.hass}" 
             .includeDomains="${["sensor"]}" 
             .entityFilter="${(s) => this._filterEntity(s)}"
             @value-changed="${this._addEntity}">
-          </ha-entity-picker>
+          </ha-combo-box>
         </div>
 
         <div class="section-title">${t.priority_label}</div>
         <div class="config-box">
-          <ha-entity-picker 
+          <ha-combo-box 
             .label="${t.prio_picker}" 
             .hass="${this.hass}" 
             .value="${this._config.priority_entity || ''}" 
@@ -119,7 +119,7 @@ class CompactTeamTrackerEditor extends LitElement {
             .entityFilter="${(s) => this._filterEntity(s)}"
             @value-changed="${this._prioChanged}" 
             allow-custom-entity>
-          </ha-entity-picker>
+          </ha-combo-box>
           <p class="help-text">${t.prio_help}</p>
         </div>
 
@@ -168,7 +168,7 @@ class CompactTeamTrackerEditor extends LitElement {
     .section-title { font-weight: bold; font-size: 14px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
     .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
     .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; } 
-    ha-entity-picker { flex-grow: 1; } 
+    ha-combo-box { flex-grow: 1; } 
     .delete-icon { cursor: pointer; color: var(--error-color); } 
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; }
     .switch-row:last-child { margin-bottom: 0; }

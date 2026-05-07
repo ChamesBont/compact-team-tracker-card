@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.6 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.5 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -58,13 +58,9 @@ const LANG = {
 class CompactTeamTrackerEditor extends LitElement {
   static get properties() { return { hass: {}, _config: {} }; }
   
-  constructor() {
-    super();
-    this._entityFilter = this._entityFilter.bind(this);
-  }
-
   setConfig(config) {
-    this._config = config;
+    // FIX: Tiefe Kopie verhindert "Object is not extensible" Fehler in neuen HA-Versionen
+    this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = this._config.entity ? [this._config.entity] : [];
   }
 
@@ -73,16 +69,12 @@ class CompactTeamTrackerEditor extends LitElement {
     return LANG[l] || LANG['en'];
   }
 
-  _entityFilter(stateObj) {
+  // Lockerer Filter, um keine Sensoren fälschlicherweise zu blockieren
+  _filterEntity(stateObj) {
     if (!stateObj) return false;
-    const entityId = stateObj.entity_id || "";
-    const attr = stateObj.attributes || {};
-    const attribution = (attr.attribution || "").toLowerCase();
-    // Primär: ESPN-Attribution oder "team_tracker" im Entity-Namen
-    if (attribution.includes("espn") || entityId.includes("team_tracker")) return true;
-    // Fallback: Sensor hat typische Team-Tracker-Attribute
-    if (attr.team_abbr || attr.opponent_abbr || attr.team_score !== undefined) return true;
-    return false;
+    const id = stateObj.entity_id || "";
+    const attr = stateObj.attributes?.attribution || "";
+    return id.includes("team_tracker") || attr.toLowerCase().includes("espn") || id.includes("sensor.");
   }
 
   render() {
@@ -100,7 +92,7 @@ class CompactTeamTrackerEditor extends LitElement {
                 .hass="${this.hass}" 
                 .value="${ent}" 
                 .includeDomains="${["sensor"]}" 
-                .entityFilter="${this._entityFilter}"
+                .entityFilter="${(s) => this._filterEntity(s)}"
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
               </ha-entity-picker>
@@ -111,8 +103,9 @@ class CompactTeamTrackerEditor extends LitElement {
             .label="${t.add_team}" 
             .hass="${this.hass}" 
             .includeDomains="${["sensor"]}" 
-            .entityFilter="${this._entityFilter}"
-            @value-changed="${this._addEntity}">
+            .entityFilter="${(s) => this._filterEntity(s)}"
+            @value-changed="${this._addEntity}"
+            allow-custom-entity>
           </ha-entity-picker>
         </div>
 
@@ -123,7 +116,6 @@ class CompactTeamTrackerEditor extends LitElement {
             .hass="${this.hass}" 
             .value="${this._config.priority_entity || ''}" 
             .includeDomains="${["sensor"]}" 
-            .entityFilter="${this._entityFilter}"
             @value-changed="${this._prioChanged}" 
             allow-custom-entity>
           </ha-entity-picker>
@@ -132,7 +124,7 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.layout_section}</div>
         <div class="config-box">
-          <div class="switch-row"><ha-switch .checked="${this._config.layout === 'ultra'}" .configValue="${"layout"}" @change="${this._toggleLayout}"></ha-switch><span>${t.ultra_layout}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.layout === 'ultra'}" @change="${this._toggleLayout}"></ha-switch><span>${t.ultra_layout}</span></div>
           <div class="switch-row"><ha-switch .checked="${this._config.show_league !== false}" .configValue="${"show_league"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_league}</span></div>
         </div>
 
@@ -147,38 +139,50 @@ class CompactTeamTrackerEditor extends LitElement {
         <div class="section-title">${t.live_details_section}</div>
         <div class="config-box">
           <div class="switch-row"><ha-switch .checked="${this._config.show_last_play !== false}" .configValue="${"show_last_play"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_last_play}</span></div>
-          <p class="help-text">${t.last_play_help}</p>
           <div class="switch-row"><ha-switch .checked="${this._config.last_play_marquee === true}" .configValue="${"last_play_marquee"}" @change="${this._toggleOption}"></ha-switch><span>${t.last_play_marquee}</span></div>
         </div>
       </div>
     `;
   }
+
   _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
   _toggleOption(ev) { this._updateConfig({ ...this._config, [ev.target.configValue]: ev.target.checked }); }
+  
   _entityChanged(idx, ev) {
+    if (!ev.detail.value) return;
     const newEntities = [...this._config.entities];
     newEntities[idx] = ev.detail.value;
     this._updateConfig({ ...this._config, entities: newEntities });
   }
+
   _addEntity(ev) {
     if (!ev.detail.value) return;
-    const newEnts = this._config.entities ? [...this._config.entities, ev.detail.value] : [ev.detail.value];
+    const newEnts = [...this._config.entities, ev.detail.value];
     this._updateConfig({ ...this._config, entities: newEnts });
     ev.target.value = "";
   }
-  _removeEntity(idx) { this._updateConfig({ ...this._config, entities: this._config.entities.filter((_, i) => i !== idx) }); }
-  _prioChanged(ev) { this._updateConfig({ ...this._config, priority_entity: ev.detail.value }); }
-  _updateConfig(newConfig) { this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true })); }
+
+  _removeEntity(idx) {
+    const newEntities = this._config.entities.filter((_, i) => i !== idx);
+    this._updateConfig({ ...this._config, entities: newEntities });
+  }
+
+  _prioChanged(ev) {
+    this._updateConfig({ ...this._config, priority_entity: ev.detail.value });
+  }
+
+  _updateConfig(newConfig) {
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true }));
+  }
   
   static get styles() { return css`
     .card-config { padding: 4px; }
-    .section-title { font-weight: bold; font-size: 14px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
+    .section-title { font-weight: bold; font-size: 12px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
     .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
-    .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    ha-entity-picker { flex-grow: 1; display: block; width: 100%; }
-    .delete-icon { cursor: pointer; color: var(--error-color); flex-shrink: 0; }
+    .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; } 
+    ha-entity-picker { flex-grow: 1; } 
+    .delete-icon { cursor: pointer; color: var(--error-color); } 
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; }
-    .switch-row:last-child { margin-bottom: 0; }
     .help-text { font-size: 12px; opacity: 0.6; margin: 4px 0 8px 0; line-height: 1.2; font-style: italic; }
   `; }
 }
@@ -188,46 +192,30 @@ customElements.define("compact-team-tracker-editor", CompactTeamTrackerEditor);
 class CompactTeamTracker extends LitElement {
   static get properties() { return { hass: {}, config: {} }; }
   
-  setConfig(config) { 
-    this.config = config; 
-  }
+  setConfig(config) { this.config = config; }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
   static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false }; }
 
-  get _lang() {
-    const l = this.hass?.language || 'de';
-    return LANG[l] || LANG['en'];
-  }
-
   render() {
     if (!this.hass) return html``;
-    const t = this._lang;
+    const t = LANG[this.hass.language] || LANG['en'];
     const entities = this.config.entities || [];
     
     if (entities.length === 0) {
-      return html`
-        <ha-card style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
-          ${t.no_entities}
-        </ha-card>
-      `;
+      return html`<ha-card style="padding: 16px; text-align: center;">${t.no_entities}</ha-card>`;
     }
 
-    const states = entities
-      .map(id => this.hass.states[id])
-      .filter(s => s && s.attributes && s.attributes.team_abbr);
-
-    if (states.length === 0) {
-       return html`<ha-card style="padding: 16px; text-align: center; opacity: 0.5;">(Warte auf Sensordaten...)</ha-card>`;
-    }
+    const states = entities.map(id => this.hass.states[id]).filter(s => s && s.attributes && s.attributes.team_abbr);
+    if (states.length === 0) return html`<ha-card style="padding: 16px; text-align: center;">(Warte auf Sensordaten...)</ha-card>`;
 
     const prioId = this.config.priority_entity;
     const sortedStates = [...states].sort((a, b) => {
       const timeA = new Date(a.attributes.date).getTime();
       const timeB = new Date(b.attributes.date).getTime();
       if (timeA !== timeB) return timeA - timeB;
-      if (a.entity_id === prioId && b.entity_id !== prioId) return -1;
-      if (b.entity_id === prioId && a.entity_id !== prioId) return 1;
+      if (a.entity_id === prioId) return -1;
+      if (b.entity_id === prioId) return 1;
       return 0;
     });
 
@@ -235,24 +223,20 @@ class CompactTeamTracker extends LitElement {
     const uniqueStates = [];
     for (const s of sortedStates) {
       const matchId = `${s.attributes.team_abbr}-${s.attributes.opponent_abbr}-${s.attributes.date?.split('T')[0]}`;
-      const matchIdReverse = `${s.attributes.opponent_abbr}-${s.attributes.team_abbr}-${s.attributes.date?.split('T')[0]}`;
-      if (!seenMatches.has(matchId) && !seenMatches.has(matchIdReverse)) {
+      const revMatchId = `${s.attributes.opponent_abbr}-${s.attributes.team_abbr}-${s.attributes.date?.split('T')[0]}`;
+      if (!seenMatches.has(matchId) && !seenMatches.has(revMatchId)) {
         seenMatches.add(matchId);
         uniqueStates.push(s);
       }
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    let filteredList = uniqueStates.filter(s => {
-      // Nur ausblenden, wenn die Option explizit auf true gesetzt wurde
+    let displayList = uniqueStates.filter(s => {
       if (this.config.only_today === true && s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
       return true;
     });
 
-    let displayList = filteredList;
-    if (this.config.show_next_only && filteredList.length > 0) {
-      displayList = [filteredList[0]];
-    }
+    if (this.config.show_next_only && displayList.length > 0) displayList = [displayList[0]];
 
     return html`
       <ha-card>
@@ -277,23 +261,21 @@ class CompactTeamTracker extends LitElement {
     const timeStr = kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const fullDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    const showLeague = this.config.show_league !== false;
-    const showLastPlay = this.config.show_last_play !== false;
     const marqueeEnabled = this.config.last_play_marquee === true;
 
     return html`
       <div class="card-wrapper">
-        ${showLeague || s === 'IN' ? html`
+        ${(this.config.show_league !== false || s === 'IN') ? html`
           <div class="header-bg">
-            <div class="header ${!showLeague ? 'no-league' : ''}">
-              ${showLeague ? html`
+            <div class="header ${this.config.show_league === false ? 'no-league' : ''}">
+              ${this.config.show_league !== false ? html`
                 <div class="league-box"><img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}"><span>${a.league_name || a.league}</span></div>
               ` : ''}
               ${s === 'IN' ? html`<div class="live-status"><span class="dot"></span> ${t.live} / ${a.clock}</div>` : (s === 'POST' ? html`<div class="status-post">${t.finished}</div>` : '')}
             </div>
           </div>
         ` : ''}
-        <div class="content ${!showLeague && s !== 'IN' ? 'extra-padding' : ''}">
+        <div class="content ${(this.config.show_league === false && s !== 'IN') ? 'extra-padding' : ''}">
           <div class="team-box"><img src="${h.logo}" class="team-logo"><div class="name">${h.abbr}</div>${this.config.show_record && h.rec ? html`<div class="record">${h.rec}</div>` : ''}</div>
           <div class="score-area">
             ${s === 'PRE' 
@@ -306,7 +288,7 @@ class CompactTeamTracker extends LitElement {
 
         <div class="info-footer">
           <div class="venue">${a.venue}${a.location ? `, ${a.location}` : ''}</div>
-          ${showLastPlay && s === 'IN' && a.last_play ? html`
+          ${(this.config.show_last_play !== false && s === 'IN' && a.last_play) ? html`
             <div class="play-container ${marqueeEnabled ? 'marquee' : 'multiline'}">
               <div class="play">${a.last_play}</div>
             </div>
@@ -388,5 +370,12 @@ class CompactTeamTracker extends LitElement {
 }
 
 customElements.define("compact-team-tracker", CompactTeamTracker);
+
+// --- REGISTRIERUNG ---
 window.customCards = window.customCards || [];
-window.customCards.push({ type: "compact-team-tracker", name: "Compact Team Tracker", preview: true });
+window.customCards.push({ 
+  type: "compact-team-tracker", 
+  name: "Compact Team Tracker", 
+  description: "A compact card for sports tracking",
+  preview: true 
+});

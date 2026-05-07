@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.5 !!!");
+console.log("!!! TEAM TRACKER v2.0.6-beta.6 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -58,15 +58,31 @@ const LANG = {
 class CompactTeamTrackerEditor extends LitElement {
   static get properties() { return { hass: {}, _config: {} }; }
   
+  constructor() {
+    super();
+    this._entityFilter = this._entityFilter.bind(this);
+  }
+
   setConfig(config) {
-    // Tiefe Kopie, um "Object is not extensible" Fehler zu vermeiden
-    this._config = JSON.parse(JSON.stringify(config));
+    this._config = config;
     if (!this._config.entities) this._config.entities = this._config.entity ? [this._config.entity] : [];
   }
 
   get _lang() {
     const l = this.hass?.language || 'de';
     return LANG[l] || LANG['en'];
+  }
+
+  _entityFilter(stateObj) {
+    if (!stateObj) return false;
+    const entityId = stateObj.entity_id || "";
+    const attr = stateObj.attributes || {};
+    const attribution = (attr.attribution || "").toLowerCase();
+    // Primär: ESPN-Attribution oder "team_tracker" im Entity-Namen
+    if (attribution.includes("espn") || entityId.includes("team_tracker")) return true;
+    // Fallback: Sensor hat typische Team-Tracker-Attribute
+    if (attr.team_abbr || attr.opponent_abbr || attr.team_score !== undefined) return true;
+    return false;
   }
 
   render() {
@@ -84,6 +100,7 @@ class CompactTeamTrackerEditor extends LitElement {
                 .hass="${this.hass}" 
                 .value="${ent}" 
                 .includeDomains="${["sensor"]}" 
+                .entityFilter="${this._entityFilter}"
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
               </ha-entity-picker>
@@ -94,8 +111,8 @@ class CompactTeamTrackerEditor extends LitElement {
             .label="${t.add_team}" 
             .hass="${this.hass}" 
             .includeDomains="${["sensor"]}" 
-            @value-changed="${this._addEntity}"
-            allow-custom-entity>
+            .entityFilter="${this._entityFilter}"
+            @value-changed="${this._addEntity}">
           </ha-entity-picker>
         </div>
 
@@ -106,6 +123,7 @@ class CompactTeamTrackerEditor extends LitElement {
             .hass="${this.hass}" 
             .value="${this._config.priority_entity || ''}" 
             .includeDomains="${["sensor"]}" 
+            .entityFilter="${this._entityFilter}"
             @value-changed="${this._prioChanged}" 
             allow-custom-entity>
           </ha-entity-picker>
@@ -114,7 +132,7 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.layout_section}</div>
         <div class="config-box">
-          <div class="switch-row"><ha-switch .checked="${this._config.layout === 'ultra'}" @change="${this._toggleLayout}"></ha-switch><span>${t.ultra_layout}</span></div>
+          <div class="switch-row"><ha-switch .checked="${this._config.layout === 'ultra'}" .configValue="${"layout"}" @change="${this._toggleLayout}"></ha-switch><span>${t.ultra_layout}</span></div>
           <div class="switch-row"><ha-switch .checked="${this._config.show_league !== false}" .configValue="${"show_league"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_league}</span></div>
         </div>
 
@@ -122,55 +140,45 @@ class CompactTeamTrackerEditor extends LitElement {
         <div class="config-box">
           <div class="switch-row"><ha-switch .checked="${this._config.show_next_only === true}" .configValue="${"show_next_only"}" @change="${this._toggleOption}"></ha-switch><span>${t.next_only}</span></div>
           <div class="switch-row"><ha-switch .checked="${this._config.only_today === true}" .configValue="${"only_today"}" @change="${this._toggleOption}"></ha-switch><span>${t.hide_finished}</span></div>
+          <p class="help-text">${t.hide_finished_help}</p>
           <div class="switch-row"><ha-switch .checked="${this._config.show_record === true}" .configValue="${"show_record"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_sun}</span></div>
         </div>
 
         <div class="section-title">${t.live_details_section}</div>
         <div class="config-box">
           <div class="switch-row"><ha-switch .checked="${this._config.show_last_play !== false}" .configValue="${"show_last_play"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_last_play}</span></div>
+          <p class="help-text">${t.last_play_help}</p>
           <div class="switch-row"><ha-switch .checked="${this._config.last_play_marquee === true}" .configValue="${"last_play_marquee"}" @change="${this._toggleOption}"></ha-switch><span>${t.last_play_marquee}</span></div>
         </div>
       </div>
     `;
   }
-
   _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
   _toggleOption(ev) { this._updateConfig({ ...this._config, [ev.target.configValue]: ev.target.checked }); }
-  
   _entityChanged(idx, ev) {
     const newEntities = [...this._config.entities];
     newEntities[idx] = ev.detail.value;
     this._updateConfig({ ...this._config, entities: newEntities });
   }
-
   _addEntity(ev) {
     if (!ev.detail.value) return;
-    const newEnts = [...this._config.entities, ev.detail.value];
+    const newEnts = this._config.entities ? [...this._config.entities, ev.detail.value] : [ev.detail.value];
     this._updateConfig({ ...this._config, entities: newEnts });
     ev.target.value = "";
   }
-
-  _removeEntity(idx) {
-    const newEntities = this._config.entities.filter((_, i) => i !== idx);
-    this._updateConfig({ ...this._config, entities: newEntities });
-  }
-
-  _prioChanged(ev) {
-    this._updateConfig({ ...this._config, priority_entity: ev.detail.value });
-  }
-
-  _updateConfig(newConfig) {
-    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true }));
-  }
+  _removeEntity(idx) { this._updateConfig({ ...this._config, entities: this._config.entities.filter((_, i) => i !== idx) }); }
+  _prioChanged(ev) { this._updateConfig({ ...this._config, priority_entity: ev.detail.value }); }
+  _updateConfig(newConfig) { this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true })); }
   
   static get styles() { return css`
     .card-config { padding: 4px; }
-    .section-title { font-weight: bold; font-size: 12px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
+    .section-title { font-weight: bold; font-size: 14px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
     .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
-    .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; } 
-    ha-entity-picker { flex-grow: 1; } 
-    .delete-icon { cursor: pointer; color: var(--error-color); } 
+    .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    ha-entity-picker { flex-grow: 1; display: block; width: 100%; }
+    .delete-icon { cursor: pointer; color: var(--error-color); flex-shrink: 0; }
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+    .switch-row:last-child { margin-bottom: 0; }
     .help-text { font-size: 12px; opacity: 0.6; margin: 4px 0 8px 0; line-height: 1.2; font-style: italic; }
   `; }
 }
@@ -180,30 +188,46 @@ customElements.define("compact-team-tracker-editor", CompactTeamTrackerEditor);
 class CompactTeamTracker extends LitElement {
   static get properties() { return { hass: {}, config: {} }; }
   
-  setConfig(config) { this.config = config; }
+  setConfig(config) { 
+    this.config = config; 
+  }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
   static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false }; }
 
+  get _lang() {
+    const l = this.hass?.language || 'de';
+    return LANG[l] || LANG['en'];
+  }
+
   render() {
     if (!this.hass) return html``;
-    const t = LANG[this.hass.language] || LANG['en'];
+    const t = this._lang;
     const entities = this.config.entities || [];
     
     if (entities.length === 0) {
-      return html`<ha-card style="padding: 16px; text-align: center;">${t.no_entities}</ha-card>`;
+      return html`
+        <ha-card style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
+          ${t.no_entities}
+        </ha-card>
+      `;
     }
 
-    const states = entities.map(id => this.hass.states[id]).filter(s => s && s.attributes && s.attributes.team_abbr);
-    if (states.length === 0) return html`<ha-card style="padding: 16px; text-align: center;">(Warte auf Daten...)</ha-card>`;
+    const states = entities
+      .map(id => this.hass.states[id])
+      .filter(s => s && s.attributes && s.attributes.team_abbr);
+
+    if (states.length === 0) {
+       return html`<ha-card style="padding: 16px; text-align: center; opacity: 0.5;">(Warte auf Sensordaten...)</ha-card>`;
+    }
 
     const prioId = this.config.priority_entity;
     const sortedStates = [...states].sort((a, b) => {
       const timeA = new Date(a.attributes.date).getTime();
       const timeB = new Date(b.attributes.date).getTime();
       if (timeA !== timeB) return timeA - timeB;
-      if (a.entity_id === prioId) return -1;
-      if (b.entity_id === prioId) return 1;
+      if (a.entity_id === prioId && b.entity_id !== prioId) return -1;
+      if (b.entity_id === prioId && a.entity_id !== prioId) return 1;
       return 0;
     });
 
@@ -211,20 +235,24 @@ class CompactTeamTracker extends LitElement {
     const uniqueStates = [];
     for (const s of sortedStates) {
       const matchId = `${s.attributes.team_abbr}-${s.attributes.opponent_abbr}-${s.attributes.date?.split('T')[0]}`;
-      const revMatchId = `${s.attributes.opponent_abbr}-${s.attributes.team_abbr}-${s.attributes.date?.split('T')[0]}`;
-      if (!seenMatches.has(matchId) && !seenMatches.has(revMatchId)) {
+      const matchIdReverse = `${s.attributes.opponent_abbr}-${s.attributes.team_abbr}-${s.attributes.date?.split('T')[0]}`;
+      if (!seenMatches.has(matchId) && !seenMatches.has(matchIdReverse)) {
         seenMatches.add(matchId);
         uniqueStates.push(s);
       }
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    let displayList = uniqueStates.filter(s => {
+    let filteredList = uniqueStates.filter(s => {
+      // Nur ausblenden, wenn die Option explizit auf true gesetzt wurde
       if (this.config.only_today === true && s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
       return true;
     });
 
-    if (this.config.show_next_only && displayList.length > 0) displayList = [displayList[0]];
+    let displayList = filteredList;
+    if (this.config.show_next_only && filteredList.length > 0) {
+      displayList = [filteredList[0]];
+    }
 
     return html`
       <ha-card>
@@ -360,12 +388,5 @@ class CompactTeamTracker extends LitElement {
 }
 
 customElements.define("compact-team-tracker", CompactTeamTracker);
-
-// --- REGISTRIERUNG ---
 window.customCards = window.customCards || [];
-window.customCards.push({ 
-  type: "compact-team-tracker", 
-  name: "Compact Team Tracker", 
-  description: "A compact card for sports tracking",
-  preview: true 
-});
+window.customCards.push({ type: "compact-team-tracker", name: "Compact Team Tracker", preview: true });

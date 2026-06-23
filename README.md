@@ -43,7 +43,7 @@ Multiple options for customization.
 ## 🚀 Installation
 
 ### Method 1: via HACS (recommended):
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ChamesBont&repository=https%3A%2F%2Fgithub.com%2FChamesBont%2Fcompact-team-tracker-card&category=Lovelace)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ChamesBont&repository=compact-team-tracker-card&category=Lovelace)
 
 ### Method 2: Manually add repository to HACS (recommended):
 

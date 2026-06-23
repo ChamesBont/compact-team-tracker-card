@@ -42,7 +42,10 @@ Multiple options for customization.
 
 ## 🚀 Installation
 
-### Method 1: Manually add repository to HACS (recommended):
+### Method 1: via HACS (recommended):
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ChamesBont&repository=compact-team-tracker-card&category=Lovelace)
+
+### Method 2: Manually add repository to HACS (recommended):
 
 1. Open HACS section in Home Assistant.
 2. Click on the 3 dots in the top right corner.
@@ -52,7 +55,7 @@ Multiple options for customization.
     * Type: `Dashboard`
 5. Click the "ADD" button.
 
-### Method 2: Manual Installation
+### Method 3: Manual Installation
 
 1.  Download the `compact-team-tracker-card.js` file from this repository.
 2.  Upload it to your Home Assistant `/config/www/` folder.

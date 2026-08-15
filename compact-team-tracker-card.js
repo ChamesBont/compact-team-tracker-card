@@ -1,23 +1,21 @@
-console.log("!!! TEAM TRACKER v2.0.6-beta.4.1 !!!");
+console.log("!!! TEAM TRACKER v2.0.7-beta.1 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
 const css = LitElement.prototype.css;
 
-// --- HILFSFUNKTION FÜR LAZY LOADING ---
-// Zwingt Home Assistant, die internen Editor-Elemente (wie den Picker) zu laden
-async function loadHAComponents() {
+// --- AUTO-PRELOAD FÜR LAZY LOADING ---
+async function preloadHAComponents() {
   if (customElements.get("ha-entity-picker")) return;
   if (window.loadCardHelpers) {
     try {
       const helpers = await window.loadCardHelpers();
-      // Erstellt unsichtbar eine Standard-Karte, um HA zum Laden des Pickers zu zwingen
       const card = helpers.createCardElement({ type: "entities", entities: [] });
       if (card.constructor.getConfigElement) {
         await card.constructor.getConfigElement();
       }
     } catch (e) {
-      console.warn("Team Tracker: Fehler beim Laden der HA-Komponenten", e);
+      console.warn("Team Tracker: Lazy-Loading der HA-Komponenten fehlgeschlagen", e);
     }
   }
 }
@@ -74,26 +72,24 @@ const LANG = {
 
 // --- EDITOR ---
 class CompactTeamTrackerEditor extends LitElement {
-  static get properties() { return { hass: {}, _config: {}, _componentsLoaded: {} }; }
+  static get properties() { return { hass: {}, _config: {}, _pickerReady: {} }; }
 
   constructor() {
     super();
-    this._componentsLoaded = !!customElements.get("ha-entity-picker");
+    this._pickerReady = !!customElements.get("ha-entity-picker");
   }
 
-  // Wird aufgerufen, wenn der Editor im Dashboard geöffnet wird
   async connectedCallback() {
     super.connectedCallback();
-    if (!this._componentsLoaded) {
-      await loadHAComponents();
-      this._componentsLoaded = true;
-      this.requestUpdate(); // Zeichnet den Editor neu, sobald der Picker bereit ist
+    if (!this._pickerReady) {
+      await preloadHAComponents();
+      this._pickerReady = true;
+      this.requestUpdate();
     }
   }
   
   setConfig(config) {
-    // FIX: Kopie erstellen, um "Object is not extensible" bei leeren Dashboards zu verhindern
-    this._config = { ...config };
+    this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = this._config.entity ? [this._config.entity] : [];
   }
 
@@ -112,14 +108,17 @@ class CompactTeamTrackerEditor extends LitElement {
     if (!this.hass || !this._config) return html``;
     const t = this._lang;
 
-    // Lade-Ansicht, bis Home Assistant den Picker im Hintergrund heruntergeladen hat
-    if (!this._componentsLoaded && !customElements.get("ha-entity-picker")) {
+    if (!this._pickerReady && !customElements.get("ha-entity-picker")) {
       return html`
         <div style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
-          Lade Editor-Komponenten von Home Assistant...
+          Registriere Editor-Komponenten im Dashboard...
         </div>
       `;
     }
+
+    const isUltra = this._config.layout === 'ultra';
+    const isShowLastPlayDisabled = isUltra;
+    const isMarqueeDisabled = isUltra || this._config.show_last_play === false;
 
     return html`
       <div class="card-config">
@@ -164,27 +163,81 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.layout_section}</div>
         <div class="config-box">
-          <div class="switch-row"><ha-switch .checked="${this._config.layout === 'ultra'}" .configValue="${"layout"}" @change="${this._toggleLayout}"></ha-switch><span>${t.ultra_layout}</span></div>
-          <div class="switch-row"><ha-switch .checked="${this._config.show_league !== false}" .configValue="${"show_league"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_league}</span></div>
+          <div class="switch-row">
+            <ha-switch 
+              .checked="${isUltra}" 
+              .configValue="${"layout"}" 
+              @change="${this._toggleLayout}">
+            </ha-switch>
+            <span>${t.ultra_layout}</span>
+          </div>
+          <div class="switch-row ${isUltra ? 'disabled' : ''}">
+            <ha-switch 
+              .checked="${this._config.show_league !== false}" 
+              .disabled="${isUltra}"
+              .configValue="${"show_league"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.show_league}</span>
+          </div>
         </div>
 
         <div class="section-title">${t.match_info_section}</div>
         <div class="config-box">
-          <div class="switch-row"><ha-switch .checked="${this._config.show_next_only === true}" .configValue="${"show_next_only"}" @change="${this._toggleOption}"></ha-switch><span>${t.next_only}</span></div>
-          <div class="switch-row"><ha-switch .checked="${this._config.only_today === true}" .configValue="${"only_today"}" @change="${this._toggleOption}"></ha-switch><span>${t.hide_finished}</span></div>
+          <div class="switch-row">
+            <ha-switch 
+              .checked="${this._config.show_next_only === true}" 
+              .configValue="${"show_next_only"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.next_only}</span>
+          </div>
+          <div class="switch-row">
+            <ha-switch 
+              .checked="${this._config.only_today === true}" 
+              .configValue="${"only_today"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.hide_finished}</span>
+          </div>
           <p class="help-text">${t.hide_finished_help}</p>
-          <div class="switch-row"><ha-switch .checked="${this._config.show_record === true}" .configValue="${"show_record"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_sun}</span></div>
+          <div class="switch-row ${isUltra ? 'disabled' : ''}">
+            <ha-switch 
+              .checked="${this._config.show_record === true}" 
+              .disabled="${isUltra}"
+              .configValue="${"show_record"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.show_sun}</span>
+          </div>
         </div>
 
         <div class="section-title">${t.live_details_section}</div>
         <div class="config-box">
-          <div class="switch-row"><ha-switch .checked="${this._config.show_last_play !== false}" .configValue="${"show_last_play"}" @change="${this._toggleOption}"></ha-switch><span>${t.show_last_play}</span></div>
-          <p class="help-text">${t.last_play_help}</p>
-          <div class="switch-row"><ha-switch .checked="${this._config.last_play_marquee === true}" .configValue="${"last_play_marquee"}" @change="${this._toggleOption}"></ha-switch><span>${t.last_play_marquee}</span></div>
+          <div class="switch-row ${isShowLastPlayDisabled ? 'disabled' : ''}">
+            <ha-switch 
+              .checked="${this._config.show_last_play !== false}" 
+              .disabled="${isShowLastPlayDisabled}"
+              .configValue="${"show_last_play"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.show_last_play}</span>
+          </div>
+          <p class="help-text ${isShowLastPlayDisabled ? 'disabled' : ''}">${t.last_play_help}</p>
+          <div class="switch-row ${isMarqueeDisabled ? 'disabled' : ''}">
+            <ha-switch 
+              .checked="${this._config.last_play_marquee === true}" 
+              .disabled="${isMarqueeDisabled}"
+              .configValue="${"last_play_marquee"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.last_play_marquee}</span>
+          </div>
         </div>
       </div>
     `;
   }
+
   _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
   _toggleOption(ev) { this._updateConfig({ ...this._config, [ev.target.configValue]: ev.target.checked }); }
   _entityChanged(idx, ev) {
@@ -209,9 +262,10 @@ class CompactTeamTrackerEditor extends LitElement {
     .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; } 
     ha-entity-picker { flex-grow: 1; } 
     .delete-icon { cursor: pointer; color: var(--error-color); } 
-    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; transition: opacity 0.2s ease; }
     .switch-row:last-child { margin-bottom: 0; }
-    .help-text { font-size: 12px; opacity: 0.6; margin: 4px 0 8px 0; line-height: 1.2; font-style: italic; }
+    .switch-row.disabled, .help-text.disabled { opacity: 0.4; pointer-events: none; }
+    .help-text { font-size: 12px; opacity: 0.6; margin: 4px 0 8px 0; line-height: 1.2; font-style: italic; transition: opacity 0.2s ease; }
   `; }
 }
 customElements.define("compact-team-tracker-editor", CompactTeamTrackerEditor);
@@ -420,9 +474,4 @@ class CompactTeamTracker extends LitElement {
 
 customElements.define("compact-team-tracker", CompactTeamTracker);
 window.customCards = window.customCards || [];
-window.customCards.push({ 
-  type: "compact-team-tracker", 
-  name: "Compact Team Tracker", 
-  description: "A compact card for sports tracking",
-  preview: true 
-});
+window.customCards.push({ type: "compact-team-tracker", name: "Compact Team Tracker", preview: true });

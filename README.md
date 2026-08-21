@@ -22,6 +22,11 @@ The space-saving table view, perfect for tracking many teams at once.
 
 ![Ultra-Compact View](screenshots/Screenshot_compact_team_tracker_card_2.png)
 
+### Carousel Layout / Slider
+Another space-saving view.
+
+![Ultra-Compact View](screenshots/Screenshot_compact_team_tracker_card_4.png)
+
 ### Visual Editor
 Multiple options for customization.
 

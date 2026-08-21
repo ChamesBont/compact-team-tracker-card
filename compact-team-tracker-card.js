@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.7-beta.1 !!!");
+console.log("!!! TEAM TRACKER v2.0.8 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -30,6 +30,7 @@ const LANG = {
     prio_help: "Dieses Team wird bevorzugt, falls mehrere Spiele zur exakt gleichen Zeit starten.",
     layout_section: "Erscheinungsbild",
     ultra_layout: "Ultra-Compact-Layout",
+    slider_layout: "Als Karussell / Slider anzeigen",
     show_league: "Kopfzeile anzeigen",
     match_info_section: "Spiel-Informationen",
     next_only: "Nur das nächste/aktuelle Spiel anzeigen",
@@ -53,6 +54,7 @@ const LANG = {
     prio_help: "This team will be preferred if multiple games start at the exact same time.",
     layout_section: "Appearance",
     ultra_layout: "Ultra-compact layout",
+    slider_layout: "Display as carousel / slider",
     show_league: "Show card header",
     match_info_section: "Match Information",
     next_only: "Show only next/current match",
@@ -117,6 +119,7 @@ class CompactTeamTrackerEditor extends LitElement {
     }
 
     const isUltra = this._config.layout === 'ultra';
+    const isSlider = this._config.slider === true;
     const isShowLastPlayDisabled = isUltra;
     const isMarqueeDisabled = isUltra || this._config.show_last_play === false;
 
@@ -171,6 +174,14 @@ class CompactTeamTrackerEditor extends LitElement {
             </ha-switch>
             <span>${t.ultra_layout}</span>
           </div>
+          <div class="switch-row">
+            <ha-switch 
+              .checked="${isSlider}" 
+              .configValue="${"slider"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.slider_layout}</span>
+          </div>
           <div class="switch-row ${isUltra ? 'disabled' : ''}">
             <ha-switch 
               .checked="${this._config.show_league !== false}" 
@@ -184,9 +195,10 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.match_info_section}</div>
         <div class="config-box">
-          <div class="switch-row">
+          <div class="switch-row ${isSlider ? 'disabled' : ''}">
             <ha-switch 
               .checked="${this._config.show_next_only === true}" 
+              .disabled="${isSlider}"
               .configValue="${"show_next_only"}" 
               @change="${this._toggleOption}">
             </ha-switch>
@@ -272,18 +284,59 @@ customElements.define("compact-team-tracker-editor", CompactTeamTrackerEditor);
 
 // --- KARTE ---
 class CompactTeamTracker extends LitElement {
-  static get properties() { return { hass: {}, config: {} }; }
+  static get properties() { 
+    return { 
+      hass: {}, 
+      config: {}, 
+      _currentSlide: { type: Number } 
+    }; 
+  }
+
+  constructor() {
+    super();
+    this._currentSlide = 0;
+    this._touchStartX = 0;
+    this._touchEndX = 0;
+  }
   
   setConfig(config) { 
     this.config = config; 
   }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, slider: false }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
     return LANG[l] || LANG['en'];
+  }
+
+  _prevSlide(max) {
+    this._currentSlide = (this._currentSlide > 0) ? this._currentSlide - 1 : max - 1;
+  }
+
+  _nextSlide(max) {
+    this._currentSlide = (this._currentSlide < max - 1) ? this._currentSlide + 1 : 0;
+  }
+
+  _setSlide(idx) {
+    this._currentSlide = idx;
+  }
+
+  _handleTouchStart(e) {
+    this._touchStartX = e.changedTouches[0].screenX;
+  }
+
+  _handleTouchEnd(e, max) {
+    this._touchEndX = e.changedTouches[0].screenX;
+    const diff = this._touchStartX - this._touchEndX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        this._nextSlide(max);
+      } else {
+        this._prevSlide(max);
+      }
+    }
   }
 
   render() {
@@ -335,8 +388,44 @@ class CompactTeamTracker extends LitElement {
     });
 
     let displayList = filteredList;
-    if (this.config.show_next_only && filteredList.length > 0) {
+    if (this.config.show_next_only && !this.config.slider && filteredList.length > 0) {
       displayList = [filteredList[0]];
+    }
+
+    if (this.config.slider && displayList.length > 1) {
+      if (this._currentSlide >= displayList.length) {
+        this._currentSlide = 0;
+      }
+      return html`
+        <ha-card 
+          class="slider-card"
+          @touchstart="${(e) => this._handleTouchStart(e)}"
+          @touchend="${(e) => this._handleTouchEnd(e, displayList.length)}">
+          
+          <div class="slider-track" style="transform: translateX(-${this._currentSlide * 100}%);">
+            ${displayList.map(stateObj => html`
+              <div class="slider-slide">
+                <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
+                  ${this.config.layout === 'ultra' ? this.renderUltraMatch(stateObj, t) : this.renderMatch(stateObj, t)}
+                </div>
+              </div>
+            `)}
+          </div>
+
+          <div class="slider-nav">
+            <button class="nav-arrow left" @click="${() => this._prevSlide(displayList.length)}">&#10094;</button>
+            <div class="slider-dots">
+              ${displayList.map((_, idx) => html`
+                <span 
+                  class="dot-indicator ${idx === this._currentSlide ? 'active' : ''}" 
+                  @click="${() => this._setSlide(idx)}">
+                </span>
+              `)}
+            </div>
+            <button class="nav-arrow right" @click="${() => this._nextSlide(displayList.length)}">&#10095;</button>
+          </div>
+        </ha-card>
+      `;
     }
 
     return html`
@@ -427,7 +516,7 @@ class CompactTeamTracker extends LitElement {
 
   static get styles() {
     return css`
-      ha-card { overflow: hidden; padding-bottom: 8px; }
+      ha-card { overflow: hidden; padding-bottom: 8px; position: relative; }
       .spacer { height: 1px; background: var(--divider-color); opacity: 0.15; margin: 4px 16px; }
       .header-bg { background: rgba(255, 255, 255, 0.08); padding: 8px 12px; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
       .header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: bold; min-height: 20px; }
@@ -468,6 +557,17 @@ class CompactTeamTracker extends LitElement {
       .ultra-subtext { font-size: 10px; opacity: 0.7; font-weight: bold; display: flex; flex-direction: column; }
       .live-border { background: rgba(231, 76, 60, 0.05); }
       @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+      /* SLIDER / CAROUSEL STYLES */
+      .slider-card { overflow: hidden; }
+      .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); width: 100%; }
+      .slider-slide { min-width: 100%; flex-shrink: 0; box-sizing: border-box; }
+      .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); margin-top: 4px; }
+      .nav-arrow { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--primary-text-color); opacity: 0.6; padding: 4px 8px; transition: opacity 0.2s ease; }
+      .nav-arrow:hover { opacity: 1; }
+      .slider-dots { display: flex; gap: 6px; align-items: center; }
+      .dot-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--primary-text-color); opacity: 0.2; cursor: pointer; transition: all 0.2s ease; }
+      .dot-indicator.active { opacity: 0.9; transform: scale(1.3); background: var(--primary-color); }
     `;
   }
 }

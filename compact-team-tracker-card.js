@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.8 !!!");
+console.log("!!! TEAM TRACKER v2.0.9 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -517,6 +517,7 @@ class CompactTeamTracker extends LitElement {
   static get styles() {
     return css`
       ha-card { overflow: hidden; padding-bottom: 8px; position: relative; }
+      .card-wrapper { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; }
       .spacer { height: 1px; background: var(--divider-color); opacity: 0.15; margin: 4px 16px; }
       .header-bg { background: rgba(255, 255, 255, 0.08); padding: 8px 12px; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
       .header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: bold; min-height: 20px; }
@@ -526,7 +527,7 @@ class CompactTeamTracker extends LitElement {
       .live-status { color: #e74c3c; display: flex; align-items: center; }
       .status-post { opacity: 0.7; }
       .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
-      .content { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
+      .content { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; width: 100%; box-sizing: border-box; }
       .extra-padding { padding-top: 12px; }
       .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
       .team-logo { width: 50px; height: 50px; object-fit: contain; }
@@ -538,15 +539,15 @@ class CompactTeamTracker extends LitElement {
       .kickoff-time { font-size: 24px; font-weight: 800; line-height: 1; }
       .kickoff-date { font-size: 12px; font-weight: bold; margin-top: 2px; }
       .kickoff-exact { font-size: 10px; opacity: 0.6; }
-      .info-footer { margin-top: 10px; padding: 8px 12px 0; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; }
+      .info-footer { margin-top: 10px; padding: 8px 12px 0; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
       .venue { font-weight: bold; margin-bottom: 4px; }
-      .play-container { width: 100%; position: relative; margin-top: 4px; }
+      .play-container { width: 100%; max-width: 100%; position: relative; margin-top: 4px; box-sizing: border-box; overflow: hidden; }
       .play-container.marquee { overflow: hidden; white-space: nowrap; }
-      .play-container.multiline { white-space: normal; }
-      .play { display: inline-block; color: var(--primary-text-color); font-style: normal; }
-      .marquee .play { padding-left: 100%; animation: marquee 15s linear infinite; }
+      .play-container.multiline { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+      .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
+      .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }
       @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
-      .ultra-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; }
+      .ultra-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; width: 100%; box-sizing: border-box; }
       .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
       .ultra-team.right { justify-content: flex-end; }
       .ultra-logo { width: 28px; height: 28px; object-fit: contain; }
@@ -559,9 +560,9 @@ class CompactTeamTracker extends LitElement {
       @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
       /* SLIDER / CAROUSEL STYLES */
-      .slider-card { overflow: hidden; }
+      .slider-card { overflow: hidden; width: 100%; box-sizing: border-box; }
       .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); width: 100%; }
-      .slider-slide { min-width: 100%; flex-shrink: 0; box-sizing: border-box; }
+      .slider-slide { min-width: 100%; max-width: 100%; width: 100%; flex-shrink: 0; box-sizing: border-box; overflow: hidden; }
       .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); margin-top: 4px; }
       .nav-arrow { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--primary-text-color); opacity: 0.6; padding: 4px 8px; transition: opacity 0.2s ease; }
       .nav-arrow:hover { opacity: 1; }

@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9-beta.3 - FAVORITE COLOR PRIORITY FIX !!!");
+console.log("!!! TEAM TRACKER v2.0.9-beta.4 - CLEAN COLOR PICKER LAYOUT !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -42,6 +42,8 @@ const LANG = {
     last_play_help: "Zeigt bei Live-Spielen eine Textzusammenfassung des letzten Spielzugs an.",
     last_play_marquee: "Lauftext für letzten Spielzug nutzen",
     no_entities: "Bitte füge in der Konfiguration Teams hinzu, um die Vorschau zu sehen.",
+    bg_color: "Hintergrundfarbe (optional):",
+    reset: "Zurücksetzen",
     scheduled: "Geplant",
     finished: "Beendet",
     live: "LIVE"
@@ -66,6 +68,8 @@ const LANG = {
     last_play_help: "Displays a text summary of the most recent play during live games.",
     last_play_marquee: "Use marquee for last play",
     no_entities: "Please add teams in the configuration to see the preview.",
+    bg_color: "Background color (optional):",
+    reset: "Reset",
     scheduled: "Scheduled",
     finished: "Finished",
     live: "LIVE"
@@ -130,9 +134,18 @@ class CompactTeamTrackerEditor extends LitElement {
         <div class="section-title">${t.manage_teams}</div>
         <div class="config-box">
           ${this._config.entities.map((ent, idx) => html`
-            <div class="entity-row" key="${ent || idx}">
+            <div class="team-item-card" key="${ent || idx}">
+              <div class="team-item-header">
+                <span class="team-number-label">Team ${idx + 1}</span>
+                <ha-icon 
+                  icon="mdi:trash-can-outline" 
+                  class="delete-icon" 
+                  title="Team entfernen"
+                  @click="${() => this._removeEntity(idx)}">
+                </ha-icon>
+              </div>
+              
               <ha-entity-picker 
-                .label="${`Team ${idx + 1}`}" 
                 .hass="${this.hass}" 
                 .value="${ent}" 
                 .includeDomains="${["sensor"]}" 
@@ -140,30 +153,31 @@ class CompactTeamTrackerEditor extends LitElement {
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
               </ha-entity-picker>
-              <div class="color-picker-container" title="Hintergrundfarbe (HEX)">
-                <input 
-                  type="color" 
-                  class="color-circle" 
-                  .value="${colors[ent] || '#1c1c1e'}" 
-                  @input="${(ev) => this._colorChanged(ent, ev.target.value)}">
-                <input 
-                  type="text" 
-                  class="color-text-input" 
-                  placeholder="#HEX" 
-                  .value="${colors[ent] || ''}" 
-                  @change="${(ev) => this._colorChanged(ent, ev.target.value)}">
-                ${colors[ent] ? html`
-                  <ha-icon 
-                    icon="mdi:close-circle" 
-                    class="reset-color-icon" 
-                    title="Farbe zurücksetzen"
-                    @click="${() => this._resetColor(ent)}">
-                  </ha-icon>
-                ` : ''}
+
+              <div class="team-color-subrow">
+                <span class="color-label">${t.bg_color}</span>
+                <div class="color-controls">
+                  <input 
+                    type="color" 
+                    class="color-circle" 
+                    .value="${colors[ent] || '#1c1c1e'}" 
+                    @input="${(ev) => this._colorChanged(ent, ev.target.value)}">
+                  <input 
+                    type="text" 
+                    class="color-text-input" 
+                    placeholder="#HEX" 
+                    .value="${colors[ent] || ''}" 
+                    @change="${(ev) => this._colorChanged(ent, ev.target.value)}">
+                  ${colors[ent] ? html`
+                    <button class="reset-color-btn" @click="${() => this._resetColor(ent)}">
+                      ${t.reset}
+                    </button>
+                  ` : ''}
+                </div>
               </div>
-              <ha-icon icon="mdi:delete" class="delete-icon" @click="${() => this._removeEntity(idx)}"></ha-icon>
             </div>
           `)}
+          
           <ha-entity-picker 
             .label="${t.add_team}" 
             .hass="${this.hass}" 
@@ -336,17 +350,92 @@ class CompactTeamTrackerEditor extends LitElement {
     .card-config { padding: 4px; }
     .section-title { font-weight: bold; font-size: 14px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
     .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
-    .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; } 
-    ha-entity-picker { flex-grow: 1; } 
-    .delete-icon { cursor: pointer; color: var(--error-color); } 
     
-    .color-picker-container { display: flex; align-items: center; gap: 6px; background: rgba(128, 128, 128, 0.1); padding: 4px 6px; border-radius: 6px; }
-    .color-circle { -webkit-appearance: none; -moz-appearance: none; appearance: none; border: 1px solid var(--divider-color); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; background: none; padding: 0; }
+    /* Team Card Layout */
+    .team-item-card { 
+      background: var(--card-background-color, rgba(255, 255, 255, 0.03)); 
+      border: 1px solid var(--divider-color, rgba(128, 128, 128, 0.2)); 
+      border-radius: 8px; 
+      padding: 10px 12px; 
+      margin-bottom: 12px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px; 
+    }
+    .team-item-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
+    .team-number-label { 
+      font-size: 12px; 
+      font-weight: bold; 
+      color: var(--secondary-text-color); 
+    }
+    .delete-icon { 
+      cursor: pointer; 
+      color: var(--error-color, #e74c3c); 
+      opacity: 0.8; 
+      transition: opacity 0.2s ease; 
+      --mdc-icon-size: 18px; 
+    }
+    .delete-icon:hover { opacity: 1; }
+
+    .team-color-subrow { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      gap: 8px; 
+      padding-top: 4px; 
+      border-top: 1px dashed rgba(128, 128, 128, 0.15); 
+      font-size: 12px; 
+    }
+    .color-label { 
+      color: var(--secondary-text-color); 
+    }
+    .color-controls { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+    }
+    .color-circle { 
+      -webkit-appearance: none; 
+      -moz-appearance: none; 
+      appearance: none; 
+      border: 1px solid var(--divider-color); 
+      width: 24px; 
+      height: 24px; 
+      border-radius: 50%; 
+      cursor: pointer; 
+      background: none; 
+      padding: 0; 
+    }
     .color-circle::-webkit-color-swatch-wrapper { padding: 0; }
     .color-circle::-webkit-color-swatch { border: none; border-radius: 50%; }
-    .color-text-input { width: 68px; border: 1px solid var(--divider-color); background: var(--card-background-color, #1e1e1e); color: var(--primary-text-color); font-size: 11px; padding: 4px 6px; border-radius: 4px; text-transform: uppercase; }
-    .reset-color-icon { cursor: pointer; font-size: 16px; opacity: 0.6; color: var(--secondary-text-color); }
-    .reset-color-icon:hover { opacity: 1; }
+    .color-text-input { 
+      width: 62px; 
+      border: 1px solid var(--divider-color); 
+      background: var(--card-background-color, #1e1e1e); 
+      color: var(--primary-text-color); 
+      font-size: 11px; 
+      padding: 3px 6px; 
+      border-radius: 4px; 
+      text-transform: uppercase; 
+    }
+    .reset-color-btn { 
+      background: none; 
+      border: 1px solid var(--divider-color); 
+      color: var(--secondary-text-color); 
+      border-radius: 4px; 
+      padding: 2px 6px; 
+      font-size: 10px; 
+      cursor: pointer; 
+      transition: all 0.2s ease; 
+    }
+    .reset-color-btn:hover { 
+      color: var(--primary-text-color); 
+      background: rgba(128, 128, 128, 0.1); 
+    }
 
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; transition: opacity 0.2s ease; }
     .switch-row:last-child { margin-bottom: 0; }
@@ -424,7 +513,6 @@ class CompactTeamTracker extends LitElement {
       if (prioState && prioState.attributes) {
         const pAttr = prioState.attributes;
         const sAttr = stateObj.attributes;
-        // Wenn der Favorit an diesem Spiel beteiligt ist
         if (
           stateObj.entity_id === prioId ||
           (pAttr.team_abbr && (pAttr.team_abbr === sAttr.team_abbr || pAttr.team_abbr === sAttr.opponent_abbr))

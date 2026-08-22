@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9-beta11 !!!");
+console.log("!!! TEAM TRACKER v2.0.9 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -750,7 +750,7 @@ class CompactTeamTracker extends LitElement {
 
   static get styles() {
     return css`
-      ha-card { overflow: hidden; padding-bottom: 8px; position: relative; }
+      ha-card { overflow: hidden; position: relative; }
       .card-wrapper { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; border-radius: inherit; transition: background-color 0.3s ease; }
       .spacer { height: 1px; background: var(--divider-color); opacity: 0.15; margin: 4px 16px; }
       .header-bg { background: rgba(255, 255, 255, 0.05); padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
@@ -797,7 +797,7 @@ class CompactTeamTracker extends LitElement {
       .slider-card { overflow: hidden; width: 100%; box-sizing: border-box; padding-bottom: 6px; }
       .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); width: 100%; }
       .slider-slide { min-width: 100%; max-width: 100%; width: 100%; flex-shrink: 0; box-sizing: border-box; overflow: hidden; transition: background-color 0.3s ease; }
-      .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); margin-top: 2px; }
+      .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); }
       .nav-arrow { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--primary-text-color); opacity: 0.6; padding: 4px 8px; transition: opacity 0.2s ease; }
       .nav-arrow:hover { opacity: 1; }
       .slider-dots { display: flex; gap: 6px; align-items: center; }

@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9-beta.3 - CUSTOM TEAM COLORS FIX !!!");
+console.log("!!! TEAM TRACKER v2.0.9-beta.3 - FAVORITE COLOR PRIORITY FIX !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -25,9 +25,9 @@ const LANG = {
   de: {
     manage_teams: "Teams verwalten",
     add_team: "Neues Team hinzufügen...",
-    priority_label: "Priorität",
+    priority_label: "Priorität / Favorit",
     prio_picker: "Haupt-Sensor auswählen",
-    prio_help: "Dieses Team wird bevorzugt, falls mehrere Spiele zur exakt gleichen Zeit starten.",
+    prio_help: "Dieses Team wird bei gleicher Spielzeit bevorzugt und seine Teamfarbe hat immer Vorrang.",
     layout_section: "Erscheinungsbild",
     ultra_layout: "Ultra-Compact-Layout",
     slider_layout: "Als Karussell / Slider anzeigen",
@@ -49,9 +49,9 @@ const LANG = {
   en: {
     manage_teams: "Manage Teams",
     add_team: "Add new team...",
-    priority_label: "Priority",
+    priority_label: "Priority / Favorite",
     prio_picker: "Select main sensor",
-    prio_help: "This team will be preferred if multiple games start at the exact same time.",
+    prio_help: "This team is preferred for simultaneous games, and its custom color always takes precedence.",
     layout_section: "Appearance",
     ultra_layout: "Ultra-compact layout",
     slider_layout: "Display as carousel / slider",
@@ -140,12 +140,17 @@ class CompactTeamTrackerEditor extends LitElement {
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
               </ha-entity-picker>
-              <div class="color-picker-wrapper" title="Hintergrundfarbe (HEX)">
+              <div class="color-picker-container" title="Hintergrundfarbe (HEX)">
                 <input 
                   type="color" 
-                  class="color-input" 
+                  class="color-circle" 
                   .value="${colors[ent] || '#1c1c1e'}" 
-                  @input="${(ev) => this._colorChanged(ent, ev.target.value)}"
+                  @input="${(ev) => this._colorChanged(ent, ev.target.value)}">
+                <input 
+                  type="text" 
+                  class="color-text-input" 
+                  placeholder="#HEX" 
+                  .value="${colors[ent] || ''}" 
                   @change="${(ev) => this._colorChanged(ent, ev.target.value)}">
                 ${colors[ent] ? html`
                   <ha-icon 
@@ -287,7 +292,13 @@ class CompactTeamTrackerEditor extends LitElement {
 
   _colorChanged(entityId, colorHex) {
     if (!entityId) return;
-    const teamColors = { ...(this._config.team_colors || {}), [entityId]: colorHex };
+    const formatted = colorHex ? (colorHex.startsWith('#') ? colorHex : `#${colorHex}`) : '';
+    const teamColors = { ...(this._config.team_colors || {}) };
+    if (formatted) {
+      teamColors[entityId] = formatted;
+    } else {
+      delete teamColors[entityId];
+    }
     this._updateConfig({ ...this._config, team_colors: teamColors });
   }
 
@@ -317,7 +328,7 @@ class CompactTeamTrackerEditor extends LitElement {
   
   _updateConfig(newConfig) { 
     this._config = JSON.parse(JSON.stringify(newConfig));
-    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true })); 
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true })); 
     this.requestUpdate();
   }
   
@@ -329,10 +340,11 @@ class CompactTeamTrackerEditor extends LitElement {
     ha-entity-picker { flex-grow: 1; } 
     .delete-icon { cursor: pointer; color: var(--error-color); } 
     
-    .color-picker-wrapper { display: flex; align-items: center; gap: 4px; position: relative; }
-    .color-input { -webkit-appearance: none; -moz-appearance: none; appearance: none; border: 1px solid var(--divider-color); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; background: none; padding: 0; }
-    .color-input::-webkit-color-swatch-wrapper { padding: 0; }
-    .color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
+    .color-picker-container { display: flex; align-items: center; gap: 6px; background: rgba(128, 128, 128, 0.1); padding: 4px 6px; border-radius: 6px; }
+    .color-circle { -webkit-appearance: none; -moz-appearance: none; appearance: none; border: 1px solid var(--divider-color); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; background: none; padding: 0; }
+    .color-circle::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-circle::-webkit-color-swatch { border: none; border-radius: 50%; }
+    .color-text-input { width: 68px; border: 1px solid var(--divider-color); background: var(--card-background-color, #1e1e1e); color: var(--primary-text-color); font-size: 11px; padding: 4px 6px; border-radius: 4px; text-transform: uppercase; }
     .reset-color-icon { cursor: pointer; font-size: 16px; opacity: 0.6; color: var(--secondary-text-color); }
     .reset-color-icon:hover { opacity: 1; }
 
@@ -399,6 +411,49 @@ class CompactTeamTracker extends LitElement {
         this._prevSlide(max);
       }
     }
+  }
+
+  // Ermittelt die Hintergrundfarbe mit Favoriten-Priorität
+  _resolveBackgroundColor(stateObj) {
+    const colors = this.config.team_colors || {};
+    const prioId = this.config.priority_entity;
+
+    // 1. Favorit / Priority Entity prüfen
+    if (prioId && colors[prioId]) {
+      const prioState = this.hass.states[prioId];
+      if (prioState && prioState.attributes) {
+        const pAttr = prioState.attributes;
+        const sAttr = stateObj.attributes;
+        // Wenn der Favorit an diesem Spiel beteiligt ist
+        if (
+          stateObj.entity_id === prioId ||
+          (pAttr.team_abbr && (pAttr.team_abbr === sAttr.team_abbr || pAttr.team_abbr === sAttr.opponent_abbr))
+        ) {
+          return colors[prioId];
+        }
+      }
+    }
+
+    // 2. Eigene Entitätsfarbe prüfen
+    if (colors[stateObj.entity_id]) {
+      return colors[stateObj.entity_id];
+    }
+
+    // 3. Farbe für beteiligten Gegner prüfen, falls dieser in entities vorhanden ist
+    const entities = this.config.entities || [];
+    for (const entId of entities) {
+      if (colors[entId]) {
+        const entState = this.hass.states[entId];
+        if (entState && entState.attributes && entState.attributes.team_abbr) {
+          const abbr = entState.attributes.team_abbr;
+          if (abbr === stateObj.attributes.team_abbr || abbr === stateObj.attributes.opponent_abbr) {
+            return colors[entId];
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   render() {
@@ -517,7 +572,7 @@ class CompactTeamTracker extends LitElement {
     const showLastPlay = this.config.show_last_play !== false;
     const marqueeEnabled = this.config.last_play_marquee === true;
     
-    const customBg = this.config.team_colors?.[entityObj.entity_id];
+    const customBg = this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
     return html`
@@ -565,7 +620,7 @@ class CompactTeamTracker extends LitElement {
     const timeStr = kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const shortDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
 
-    const customBg = this.config.team_colors?.[entityObj.entity_id];
+    const customBg = this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
     return html`

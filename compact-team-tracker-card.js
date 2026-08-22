@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9-beta10 !!!");
+console.log("!!! TEAM TRACKER v2.0.9-beta11 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -584,7 +584,6 @@ class CompactTeamTracker extends LitElement {
       const hasOpponent = !!a.opponent_abbr;
       const hasDate = !!a.date;
 
-      // Nur deduplizieren, wenn es sich um ein konkretes Spiel mit Gegner und Datum handelt
       if (hasOpponent && hasDate) {
         const dateStr = a.date.split('T')[0];
         const leagueStr = a.league || a.league_name || a.sport || '';
@@ -596,7 +595,6 @@ class CompactTeamTracker extends LitElement {
           uniqueStates.push(s);
         }
       } else {
-        // Fallback für Off-Season / Sensoren ohne Gegner: niemals mit anderen Sensoren kollidieren lassen
         const fallbackKey = s.entity_id;
         if (!seenMatches.has(fallbackKey)) {
           seenMatches.add(fallbackKey);
@@ -627,13 +625,17 @@ class CompactTeamTracker extends LitElement {
           @touchend="${(e) => this._handleTouchEnd(e, displayList.length)}">
           
           <div class="slider-track" style="transform: translateX(-${this._currentSlide * 100}%);">
-            ${displayList.map(stateObj => html`
-              <div class="slider-slide">
-                <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
-                  ${this.config.layout === 'ultra' ? this.renderUltraMatch(stateObj, t) : this.renderMatch(stateObj, t)}
+            ${displayList.map(stateObj => {
+              const slideBg = this._resolveBackgroundColor(stateObj);
+              const slideStyle = slideBg ? `background-color: ${slideBg};` : '';
+              return html`
+                <div class="slider-slide" style="${slideStyle}">
+                  <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
+                    ${this.config.layout === 'ultra' ? this.renderUltraMatch(stateObj, t, true) : this.renderMatch(stateObj, t, true)}
+                  </div>
                 </div>
-              </div>
-            `)}
+              `;
+            })}
           </div>
 
           <div class="slider-nav">
@@ -656,7 +658,7 @@ class CompactTeamTracker extends LitElement {
       <ha-card>
         <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
           ${displayList.map((stateObj, index) => html`
-            ${this.config.layout === 'ultra' ? this.renderUltraMatch(stateObj, t) : this.renderMatch(stateObj, t)}
+            ${this.config.layout === 'ultra' ? this.renderUltraMatch(stateObj, t, false) : this.renderMatch(stateObj, t, false)}
             ${index < displayList.length - 1 ? html`<div class="spacer"></div>` : ''}
           `)}
         </div>
@@ -664,7 +666,7 @@ class CompactTeamTracker extends LitElement {
     `;
   }
 
-  renderMatch(entityObj, t) {
+  renderMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const isHome = a.team_homeaway === 'home';
@@ -679,7 +681,8 @@ class CompactTeamTracker extends LitElement {
     const showLastPlay = this.config.show_last_play !== false;
     const marqueeEnabled = this.config.last_play_marquee === true;
     
-    const customBg = this._resolveBackgroundColor(entityObj);
+    // Im Slider-Modus wird die Farbe auf .slider-slide angewandt, sonst direkt auf .card-wrapper
+    const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
     return html`
@@ -718,7 +721,7 @@ class CompactTeamTracker extends LitElement {
     `;
   }
 
-  renderUltraMatch(entityObj, t) {
+  renderUltraMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const isHome = a.team_homeaway === 'home';
@@ -728,7 +731,7 @@ class CompactTeamTracker extends LitElement {
     const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
     const shortDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' }) : '';
 
-    const customBg = this._resolveBackgroundColor(entityObj);
+    const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
     return html`
@@ -791,10 +794,10 @@ class CompactTeamTracker extends LitElement {
       @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
       /* SLIDER / CAROUSEL STYLES */
-      .slider-card { overflow: hidden; width: 100%; box-sizing: border-box; }
+      .slider-card { overflow: hidden; width: 100%; box-sizing: border-box; padding-bottom: 6px; }
       .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); width: 100%; }
-      .slider-slide { min-width: 100%; max-width: 100%; width: 100%; flex-shrink: 0; box-sizing: border-box; overflow: hidden; }
-      .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); }
+      .slider-slide { min-width: 100%; max-width: 100%; width: 100%; flex-shrink: 0; box-sizing: border-box; overflow: hidden; transition: background-color 0.3s ease; }
+      .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); margin-top: 2px; }
       .nav-arrow { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--primary-text-color); opacity: 0.6; padding: 4px 8px; transition: opacity 0.2s ease; }
       .nav-arrow:hover { opacity: 1; }
       .slider-dots { display: flex; gap: 6px; align-items: center; }

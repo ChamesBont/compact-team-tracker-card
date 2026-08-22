@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9 !!!");
+console.log("!!! TEAM TRACKER v2.0.9-beta.2 - CUSTOM TEAM COLORS !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -93,6 +93,7 @@ class CompactTeamTrackerEditor extends LitElement {
   setConfig(config) {
     this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = this._config.entity ? [this._config.entity] : [];
+    if (!this._config.team_colors) this._config.team_colors = {};
   }
 
   get _lang() {
@@ -122,6 +123,7 @@ class CompactTeamTrackerEditor extends LitElement {
     const isSlider = this._config.slider === true;
     const isShowLastPlayDisabled = isUltra;
     const isMarqueeDisabled = isUltra || this._config.show_last_play === false;
+    const colors = this._config.team_colors || {};
 
     return html`
       <div class="card-config">
@@ -138,6 +140,21 @@ class CompactTeamTrackerEditor extends LitElement {
                 @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
                 allow-custom-entity>
               </ha-entity-picker>
+              <div class="color-picker-wrapper" title="Hintergrundfarbe (HEX)">
+                <input 
+                  type="color" 
+                  class="color-input" 
+                  .value="${colors[ent] || '#1c1c1e'}" 
+                  @input="${(ev) => this._colorChanged(ent, ev.target.value)}">
+                ${colors[ent] ? html`
+                  <ha-icon 
+                    icon="mdi:close-circle" 
+                    class="reset-color-icon" 
+                    title="Farbe zurücksetzen"
+                    @click="${() => this._resetColor(ent)}">
+                  </ha-icon>
+                ` : ''}
+              </div>
               <ha-icon icon="mdi:delete" class="delete-icon" @click="${() => this._removeEntity(idx)}"></ha-icon>
             </div>
           `)}
@@ -252,18 +269,49 @@ class CompactTeamTrackerEditor extends LitElement {
 
   _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
   _toggleOption(ev) { this._updateConfig({ ...this._config, [ev.target.configValue]: ev.target.checked }); }
+  
   _entityChanged(idx, ev) {
+    const oldEnt = this._config.entities[idx];
     const newEntities = [...this._config.entities];
     newEntities[idx] = ev.detail.value;
-    this._updateConfig({ ...this._config, entities: newEntities });
+    
+    const teamColors = { ...(this._config.team_colors || {}) };
+    if (oldEnt && teamColors[oldEnt] && oldEnt !== ev.detail.value) {
+      teamColors[ev.detail.value] = teamColors[oldEnt];
+      delete teamColors[oldEnt];
+    }
+
+    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors });
   }
+
+  _colorChanged(entityId, colorHex) {
+    if (!entityId) return;
+    const teamColors = { ...(this._config.team_colors || {}), [entityId]: colorHex };
+    this._updateConfig({ ...this._config, team_colors: teamColors });
+  }
+
+  _resetColor(entityId) {
+    if (!entityId) return;
+    const teamColors = { ...(this._config.team_colors || {}) };
+    delete teamColors[entityId];
+    this._updateConfig({ ...this._config, team_colors: teamColors });
+  }
+
   _addEntity(ev) {
     if (!ev.detail.value) return;
     const newEnts = this._config.entities ? [...this._config.entities, ev.detail.value] : [ev.detail.value];
     this._updateConfig({ ...this._config, entities: newEnts });
     ev.target.value = "";
   }
-  _removeEntity(idx) { this._updateConfig({ ...this._config, entities: this._config.entities.filter((_, i) => i !== idx) }); }
+
+  _removeEntity(idx) { 
+    const entToRemove = this._config.entities[idx];
+    const newEntities = this._config.entities.filter((_, i) => i !== idx);
+    const teamColors = { ...(this._config.team_colors || {}) };
+    if (entToRemove) delete teamColors[entToRemove];
+    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors }); 
+  }
+
   _prioChanged(ev) { this._updateConfig({ ...this._config, priority_entity: ev.detail.value }); }
   _updateConfig(newConfig) { this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true })); }
   
@@ -274,6 +322,14 @@ class CompactTeamTrackerEditor extends LitElement {
     .entity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; } 
     ha-entity-picker { flex-grow: 1; } 
     .delete-icon { cursor: pointer; color: var(--error-color); } 
+    
+    .color-picker-wrapper { display: flex; align-items: center; gap: 4px; position: relative; }
+    .color-input { -webkit-appearance: none; -moz-appearance: none; appearance: none; border: 1px solid var(--divider-color); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; background: none; padding: 0; }
+    .color-input::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
+    .reset-color-icon { cursor: pointer; font-size: 16px; opacity: 0.6; color: var(--secondary-text-color); }
+    .reset-color-icon:hover { opacity: 1; }
+
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; transition: opacity 0.2s ease; }
     .switch-row:last-child { margin-bottom: 0; }
     .switch-row.disabled, .help-text.disabled { opacity: 0.4; pointer-events: none; }
@@ -304,7 +360,7 @@ class CompactTeamTracker extends LitElement {
   }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, slider: false }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, slider: false, team_colors: {} }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
@@ -454,9 +510,12 @@ class CompactTeamTracker extends LitElement {
     const showLeague = this.config.show_league !== false;
     const showLastPlay = this.config.show_last_play !== false;
     const marqueeEnabled = this.config.last_play_marquee === true;
+    
+    const customBg = this.config.team_colors?.[entityObj.entity_id];
+    const customStyle = customBg ? `background-color: ${customBg};` : '';
 
     return html`
-      <div class="card-wrapper">
+      <div class="card-wrapper" style="${customStyle}">
         ${showLeague || s === 'IN' ? html`
           <div class="header-bg">
             <div class="header ${!showLeague ? 'no-league' : ''}">
@@ -500,8 +559,11 @@ class CompactTeamTracker extends LitElement {
     const timeStr = kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const shortDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
 
+    const customBg = this.config.team_colors?.[entityObj.entity_id];
+    const customStyle = customBg ? `background-color: ${customBg};` : '';
+
     return html`
-      <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}">
+      <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
         <div class="ultra-team left"><img src="${h.logo}" class="ultra-logo"><span class="ultra-abbr">${h.abbr}</span></div>
         <div class="ultra-info">
           ${s === 'PRE' 
@@ -517,7 +579,7 @@ class CompactTeamTracker extends LitElement {
   static get styles() {
     return css`
       ha-card { overflow: hidden; padding-bottom: 8px; position: relative; }
-      .card-wrapper { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+      .card-wrapper { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; border-radius: inherit; transition: background-color 0.3s ease; }
       .spacer { height: 1px; background: var(--divider-color); opacity: 0.15; margin: 4px 16px; }
       .header-bg { background: rgba(255, 255, 255, 0.08); padding: 8px 12px; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
       .header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: bold; min-height: 20px; }
@@ -547,7 +609,7 @@ class CompactTeamTracker extends LitElement {
       .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
       .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }
       @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
-      .ultra-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; width: 100%; box-sizing: border-box; }
+      .ultra-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; width: 100%; box-sizing: border-box; border-radius: inherit; transition: background-color 0.3s ease; }
       .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
       .ultra-team.right { justify-content: flex-end; }
       .ultra-logo { width: 28px; height: 28px; object-fit: contain; }
@@ -556,7 +618,7 @@ class CompactTeamTracker extends LitElement {
       .ultra-score, .ultra-main-text { font-size: 18px; font-weight: 900; }
       .live-text-large { font-size: 22px; font-weight: 900; color: #e74c3c; }
       .ultra-subtext { font-size: 10px; opacity: 0.7; font-weight: bold; display: flex; flex-direction: column; }
-      .live-border { background: rgba(231, 76, 60, 0.05); }
+      .live-border { border-left: 3px solid #e74c3c; }
       @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
       /* SLIDER / CAROUSEL STYLES */

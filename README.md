@@ -38,11 +38,12 @@ Multiple options for customization.
 
 ## ✨ Features
 
-* **Two Layout Modes:** Toggle between the detailed **Standard Card View** and the minimalist **Ultra-Compact Layout** (table view).
+* **Three Layout Modes:** Toggle between the detailed **Standard Card View**, the minimalist **Ultra-Compact Layout** (table view) and the **Compact Carousel/Slider**.
 * **Smart Filter:** Option to show only the next upcoming or currently live match.
 * **Priority System:** Define a "Main Sensor" to ensure your favorite team is always prioritized if matches start at the same time.
 * **Auto-Cleanup:** Automatically hide finished matches from previous days at midnight.
 * **Scoring Plays:** Optional list of scorers for live and finished matches, including timestamps.
+* **Custom background color:** Set your own background color for each Team.
 * **Multi-Language:** Built-in support for **English** and **German** (auto-detected from Home Assistant settings).
 
 ---

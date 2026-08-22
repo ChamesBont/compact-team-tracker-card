@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9-beta.4 - CLEAN COLOR PICKER LAYOUT !!!");
+console.log("!!! TEAM TRACKER v2.0.9-beta.6 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -567,22 +567,41 @@ class CompactTeamTracker extends LitElement {
 
     const prioId = this.config.priority_entity;
     const sortedStates = [...states].sort((a, b) => {
-      const timeA = new Date(a.attributes.date).getTime();
-      const timeB = new Date(b.attributes.date).getTime();
+      const timeA = a.attributes.date ? new Date(a.attributes.date).getTime() : 0;
+      const timeB = b.attributes.date ? new Date(b.attributes.date).getTime() : 0;
       if (timeA !== timeB) return timeA - timeB;
       if (a.entity_id === prioId && b.entity_id !== prioId) return -1;
       if (b.entity_id === prioId && a.entity_id !== prioId) return 1;
       return 0;
     });
 
+    // --- VERBESSERTE DEDUP-LOGIK ---
     const seenMatches = new Set();
     const uniqueStates = [];
+
     for (const s of sortedStates) {
-      const matchId = `${s.attributes.team_abbr}-${s.attributes.opponent_abbr}-${s.attributes.date?.split('T')[0]}`;
-      const matchIdReverse = `${s.attributes.opponent_abbr}-${s.attributes.team_abbr}-${s.attributes.date?.split('T')[0]}`;
-      if (!seenMatches.has(matchId) && !seenMatches.has(matchIdReverse)) {
-        seenMatches.add(matchId);
-        uniqueStates.push(s);
+      const a = s.attributes;
+      const hasOpponent = !!a.opponent_abbr;
+      const hasDate = !!a.date;
+
+      // Nur deduplizieren, wenn es sich um ein konkretes Spiel mit Gegner und Datum handelt
+      if (hasOpponent && hasDate) {
+        const dateStr = a.date.split('T')[0];
+        const leagueStr = a.league || a.league_name || a.sport || '';
+        const matchId = `${leagueStr}-${a.team_abbr}-${a.opponent_abbr}-${dateStr}`;
+        const matchIdReverse = `${leagueStr}-${a.opponent_abbr}-${a.team_abbr}-${dateStr}`;
+
+        if (!seenMatches.has(matchId) && !seenMatches.has(matchIdReverse)) {
+          seenMatches.add(matchId);
+          uniqueStates.push(s);
+        }
+      } else {
+        // Fallback für Off-Season / Sensoren ohne Gegner: niemals mit anderen Sensoren kollidieren lassen
+        const fallbackKey = s.entity_id;
+        if (!seenMatches.has(fallbackKey)) {
+          seenMatches.add(fallbackKey);
+          uniqueStates.push(s);
+        }
       }
     }
 
@@ -652,9 +671,9 @@ class CompactTeamTracker extends LitElement {
     const h = { logo: isHome ? a.team_logo : a.opponent_logo, abbr: isHome ? a.team_abbr : a.opponent_abbr, score: isHome ? a.team_score : a.opponent_score, rec: isHome ? a.team_record : a.opponent_record };
     const v = { logo: isHome ? a.opponent_logo : a.team_logo, abbr: isHome ? a.opponent_abbr : a.team_abbr, score: isHome ? a.opponent_score : a.team_score, rec: isHome ? a.opponent_record : a.team_record };
     
-    const kDate = new Date(a.date);
-    const timeStr = kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const fullDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const kDate = a.date ? new Date(a.date) : null;
+    const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+    const fullDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
     const showLeague = this.config.show_league !== false;
     const showLastPlay = this.config.show_last_play !== false;
@@ -679,15 +698,15 @@ class CompactTeamTracker extends LitElement {
           <div class="team-box"><img src="${h.logo}" class="team-logo"><div class="name">${h.abbr}</div>${this.config.show_record && h.rec ? html`<div class="record">${h.rec}</div>` : ''}</div>
           <div class="score-area">
             ${s === 'PRE' 
-              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in}</div><div class="kickoff-exact">(${fullDateStr})</div></div>` 
-              : html`<div class="score-nums">${h.score} : ${v.score}</div>`
+              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>` 
+              : html`<div class="score-nums">${h.score || 0} : ${v.score || 0}</div>`
             }
           </div>
-          <div class="team-box"><img src="${v.logo}" class="team-logo"><div class="name">${v.abbr}</div>${this.config.show_record && v.rec ? html`<div class="record">${v.rec}</div>` : ''}</div>
+          <div class="team-box"><img src="${v.logo}" class="team-logo"><div class="name">${v.abbr || 'TBD'}</div>${this.config.show_record && v.rec ? html`<div class="record">${v.rec}</div>` : ''}</div>
         </div>
 
         <div class="info-footer">
-          <div class="venue">${a.venue}${a.location ? `, ${a.location}` : ''}</div>
+          <div class="venue">${a.venue || ''}${a.location ? (a.venue ? `, ${a.location}` : a.location) : ''}</div>
           ${showLastPlay && s === 'IN' && a.last_play ? html`
             <div class="play-container ${marqueeEnabled ? 'marquee' : 'multiline'}">
               <div class="play">${a.last_play}</div>
@@ -704,9 +723,9 @@ class CompactTeamTracker extends LitElement {
     const isHome = a.team_homeaway === 'home';
     const h = { logo: isHome ? a.team_logo : a.opponent_logo, abbr: isHome ? a.team_abbr : a.opponent_abbr, score: isHome ? a.team_score || 0 : a.opponent_score || 0 };
     const v = { logo: isHome ? a.opponent_logo : a.team_logo, abbr: isHome ? a.opponent_abbr : a.team_abbr, score: isHome ? a.opponent_score || 0 : a.team_score || 0 };
-    const kDate = new Date(a.date);
-    const timeStr = kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const shortDateStr = kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+    const kDate = a.date ? new Date(a.date) : null;
+    const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+    const shortDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' }) : '';
 
     const customBg = this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
@@ -720,7 +739,7 @@ class CompactTeamTracker extends LitElement {
             : html`<span class="ultra-score live-text-large">${h.score}:${v.score}</span><div class="ultra-subtext"><span>${s === 'IN' ? a.clock : t.finished}</span></div>`
           }
         </div>
-        <div class="ultra-team right"><span class="ultra-abbr">${v.abbr}</span><img src="${v.logo}" class="ultra-logo"></div>
+        <div class="ultra-team right"><span class="ultra-abbr">${v.abbr || 'TBD'}</span><img src="${v.logo}" class="ultra-logo"></div>
       </div>
     `;
   }

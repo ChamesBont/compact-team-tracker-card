@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9-beta.2 - CUSTOM TEAM COLORS !!!");
+console.log("!!! TEAM TRACKER v2.0.9-beta.3 - CUSTOM TEAM COLORS FIX !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -130,7 +130,7 @@ class CompactTeamTrackerEditor extends LitElement {
         <div class="section-title">${t.manage_teams}</div>
         <div class="config-box">
           ${this._config.entities.map((ent, idx) => html`
-            <div class="entity-row" key="${idx}">
+            <div class="entity-row" key="${ent || idx}">
               <ha-entity-picker 
                 .label="${`Team ${idx + 1}`}" 
                 .hass="${this.hass}" 
@@ -145,7 +145,8 @@ class CompactTeamTrackerEditor extends LitElement {
                   type="color" 
                   class="color-input" 
                   .value="${colors[ent] || '#1c1c1e'}" 
-                  @input="${(ev) => this._colorChanged(ent, ev.target.value)}">
+                  @input="${(ev) => this._colorChanged(ent, ev.target.value)}"
+                  @change="${(ev) => this._colorChanged(ent, ev.target.value)}">
                 ${colors[ent] ? html`
                   <ha-icon 
                     icon="mdi:close-circle" 
@@ -313,7 +314,12 @@ class CompactTeamTrackerEditor extends LitElement {
   }
 
   _prioChanged(ev) { this._updateConfig({ ...this._config, priority_entity: ev.detail.value }); }
-  _updateConfig(newConfig) { this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true })); }
+  
+  _updateConfig(newConfig) { 
+    this._config = JSON.parse(JSON.stringify(newConfig));
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true })); 
+    this.requestUpdate();
+  }
   
   static get styles() { return css`
     .card-config { padding: 4px; }

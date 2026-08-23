@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1 !!!");
+console.log("!!! TEAM TRACKER v2.10.0 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -567,8 +567,30 @@ class CompactTeamTracker extends LitElement {
       }
     }
 
-    // Fallback auf Liga-Logo oder leer
     return a.league_logo || null;
+  }
+
+  // Extrahiert das echte Zieldatum bei spielfreien Tagen (z.B. aus api_message "between ... and ...")
+  _resolveOffSeasonDate(attributes) {
+    if (attributes.date) {
+      const parsed = new Date(attributes.date);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString([], { day: 'numeric', month: 'numeric', year: 'numeric' });
+      }
+    }
+
+    if (attributes.api_message) {
+      // Sucht nach dem zweiten Datum hinter "and" in der ESPN Meldung
+      const match = attributes.api_message.match(/and\s+([0-9]{4}-[0-9]{2}-[0-9]{2}(?:T[0-9:]+Z?)?)/i);
+      if (match && match[1]) {
+        const parsed = new Date(match[1]);
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toLocaleDateString([], { day: 'numeric', month: 'numeric', year: 'numeric' });
+        }
+      }
+    }
+
+    return null;
   }
 
   render() {
@@ -717,16 +739,7 @@ class CompactTeamTracker extends LitElement {
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const showLeague = this.config.show_league !== false;
     const logoUrl = this._resolveBestTeamLogo(entityObj);
-
-    // Formatierungsdatum (entweder nächstes Match-Datum oder Last-Update)
-    const targetDateStr = a.date || a.last_update || null;
-    let formattedDate = null;
-    if (targetDateStr) {
-      const parsed = new Date(targetDateStr);
-      if (!isNaN(parsed.getTime())) {
-        formattedDate = parsed.toLocaleDateString([], { day: 'numeric', month: 'numeric', year: 'numeric' });
-      }
-    }
+    const formattedDate = this._resolveOffSeasonDate(a);
 
     return html`
       <div class="card-wrapper off-season-card" style="${customStyle}">
@@ -768,6 +781,7 @@ class CompactTeamTracker extends LitElement {
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const logoUrl = this._resolveBestTeamLogo(entityObj);
+    const formattedDate = this._resolveOffSeasonDate(a);
 
     return html`
       <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
@@ -776,8 +790,8 @@ class CompactTeamTracker extends LitElement {
           <span class="ultra-abbr">${a.team_abbr || 'TBD'}</span>
         </div>
         <div class="ultra-info">
-          <span class="ultra-subtext" style="opacity: 0.9; font-size: 11px;">
-            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
+          <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
+            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games} ${formattedDate ? `(${t.until} ${formattedDate})` : ''}
           </span>
         </div>
         <div class="ultra-team right">
@@ -894,7 +908,7 @@ class CompactTeamTracker extends LitElement {
       .kickoff-date { font-size: 12px; font-weight: bold; margin-top: 2px; }
       .kickoff-exact { font-size: 10px; opacity: 0.6; }
       
-      /* --- POLISHED OFF-SEASON & NO-MATCH STYLES --- */
+      /* Off-Season Layout */
       .no-match-content { 
         display: flex; 
         align-items: center; 

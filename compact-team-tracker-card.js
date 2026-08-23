@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9.1 !!!");
+console.log("!!! TEAM TRACKER v2.1 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -48,7 +48,8 @@ const LANG = {
     finished: "Beendet",
     live: "LIVE",
     no_upcoming_games: "Keine anstehenden Spiele",
-    bye_week: "Spielfrei (Bye-Week)"
+    bye_week: "Spielfrei (Bye-Week)",
+    until: "bis"
   },
   en: {
     manage_teams: "Manage Teams",
@@ -76,7 +77,8 @@ const LANG = {
     finished: "Finished",
     live: "LIVE",
     no_upcoming_games: "No upcoming matches",
-    bye_week: "Bye Week"
+    bye_week: "Bye Week",
+    until: "until"
   }
 };
 
@@ -543,6 +545,32 @@ class CompactTeamTracker extends LitElement {
     return null;
   }
 
+  // Findet das beste Team-Logo (sucht auch in anderen Sensoren nach dem gleichen Teamkürzel)
+  _resolveBestTeamLogo(stateObj) {
+    const a = stateObj.attributes;
+    if (a.team_logo) return a.team_logo;
+
+    const myAbbr = a.team_abbr;
+    if (myAbbr) {
+      const entities = this.config.entities || [];
+      for (const entId of entities) {
+        const otherState = this.hass.states[entId];
+        if (otherState && otherState.attributes) {
+          const oAttr = otherState.attributes;
+          if (oAttr.team_abbr === myAbbr && oAttr.team_logo) {
+            return oAttr.team_logo;
+          }
+          if (oAttr.opponent_abbr === myAbbr && oAttr.opponent_logo) {
+            return oAttr.opponent_logo;
+          }
+        }
+      }
+    }
+
+    // Fallback auf Liga-Logo oder leer
+    return a.league_logo || null;
+  }
+
   render() {
     if (!this.hass) return html``;
     const t = this._lang;
@@ -604,7 +632,6 @@ class CompactTeamTracker extends LitElement {
     const todayStr = new Date().toISOString().split('T')[0];
     let filteredList = uniqueStates.filter(s => {
       const isOffSeason = s.state === 'NOT_FOUND' || s.state === 'BYE' || (!s.attributes.opponent_abbr && !s.attributes.date);
-      // Wenn "Beendete & spielfreie Tage ausblenden" aktiv ist, alte Spiele und spielfreie Sensoren ausblenden
       if (this.config.only_today === true) {
         if (isOffSeason) return false;
         if (s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
@@ -673,23 +700,36 @@ class CompactTeamTracker extends LitElement {
     const isOffSeason = stateObj.state === 'NOT_FOUND' || stateObj.state === 'BYE' || (!stateObj.attributes.opponent_abbr && !stateObj.attributes.date);
     
     if (isOffSeason) {
-      return this.renderNoMatch(stateObj, t, isInsideSlider);
+      return this.config.layout === 'ultra'
+        ? this.renderUltraNoMatch(stateObj, t, isInsideSlider)
+        : this.renderNoMatch(stateObj, t, isInsideSlider);
     }
     return this.config.layout === 'ultra' 
       ? this.renderUltraMatch(stateObj, t, isInsideSlider) 
       : this.renderMatch(stateObj, t, isInsideSlider);
   }
 
-  // --- SPIELFREI / OFF-SEASON LAYOUT ---
+  // --- STANDARD SPIELFREI / OFF-SEASON LAYOUT ---
   renderNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const showLeague = this.config.show_league !== false;
+    const logoUrl = this._resolveBestTeamLogo(entityObj);
+
+    // Formatierungsdatum (entweder nächstes Match-Datum oder Last-Update)
+    const targetDateStr = a.date || a.last_update || null;
+    let formattedDate = null;
+    if (targetDateStr) {
+      const parsed = new Date(targetDateStr);
+      if (!isNaN(parsed.getTime())) {
+        formattedDate = parsed.toLocaleDateString([], { day: 'numeric', month: 'numeric', year: 'numeric' });
+      }
+    }
 
     return html`
-      <div class="card-wrapper" style="${customStyle}">
+      <div class="card-wrapper off-season-card" style="${customStyle}">
         ${showLeague ? html`
           <div class="header-bg">
             <div class="header">
@@ -702,14 +742,46 @@ class CompactTeamTracker extends LitElement {
         ` : ''}
         
         <div class="content no-match-content ${!showLeague ? 'extra-padding' : ''}">
-          <div class="team-box single-team">
-            ${a.team_logo ? html`<img src="${a.team_logo}" class="team-logo" @error="${e => e.target.style.display='none'}">` : ''}
-            <div class="name">${a.team_name || a.team_abbr || entityObj.entity_id}</div>
+          <div class="no-match-logo-wrap">
+            ${logoUrl ? html`
+              <img src="${logoUrl}" class="team-logo off-season-logo" @error="${e => e.target.style.display='none'}">
+            ` : html`
+              <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>
+            `}
           </div>
           <div class="no-match-message">
+            <div class="no-match-team-name">${a.team_name || a.team_abbr || ''}</div>
             <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
-            ${a.last_update ? html`<div class="no-match-subtext">Stand: ${new Date(a.last_update).toLocaleDateString()}</div>` : ''}
+            ${formattedDate ? html`
+              <div class="no-match-date">${t.until} ${formattedDate}</div>
+            ` : ''}
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- ULTRA-COMPACT SPIELFREI LAYOUT ---
+  renderUltraNoMatch(entityObj, t, isInsideSlider = false) {
+    const a = entityObj.attributes;
+    const s = entityObj.state;
+    const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
+    const customStyle = customBg ? `background-color: ${customBg};` : '';
+    const logoUrl = this._resolveBestTeamLogo(entityObj);
+
+    return html`
+      <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
+        <div class="ultra-team left">
+          ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}
+          <span class="ultra-abbr">${a.team_abbr || 'TBD'}</span>
+        </div>
+        <div class="ultra-info">
+          <span class="ultra-subtext" style="opacity: 0.9; font-size: 11px;">
+            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
+          </span>
+        </div>
+        <div class="ultra-team right">
+          ${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" style="opacity: 0.7;" @error="${e => e.target.style.display='none'}">` : ''}
         </div>
       </div>
     `;
@@ -812,7 +884,6 @@ class CompactTeamTracker extends LitElement {
       .content { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; width: 100%; box-sizing: border-box; }
       .extra-padding { padding-top: 12px; }
       .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
-      .team-box.single-team { flex: 0 0 70px; }
       .team-logo { width: 48px; height: 48px; object-fit: contain; }
       .name { font-size: 14px; font-weight: 800; margin-top: 4px; }
       .record { font-size: 10px; opacity: 0.6; }
@@ -823,11 +894,66 @@ class CompactTeamTracker extends LitElement {
       .kickoff-date { font-size: 12px; font-weight: bold; margin-top: 2px; }
       .kickoff-exact { font-size: 10px; opacity: 0.6; }
       
-      /* Spielfrei / Off-Season Layout */
-      .no-match-content { justify-content: center; gap: 16px; padding: 12px 16px; }
-      .no-match-message { display: flex; flex-direction: column; justify-content: center; text-align: left; }
-      .no-match-title { font-size: 15px; font-weight: 700; opacity: 0.9; }
-      .no-match-subtext { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+      /* --- POLISHED OFF-SEASON & NO-MATCH STYLES --- */
+      .no-match-content { 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        gap: 20px; 
+        padding: 16px 20px; 
+        min-height: 80px; 
+      }
+      .no-match-logo-wrap { 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        width: 56px; 
+        height: 56px; 
+        border-radius: 50%; 
+        background: rgba(255, 255, 255, 0.06); 
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); 
+        flex-shrink: 0; 
+      }
+      .off-season-logo { 
+        width: 44px; 
+        height: 44px; 
+        object-fit: contain; 
+      }
+      .off-season-icon-fallback { 
+        --mdc-icon-size: 32px; 
+        color: var(--secondary-text-color); 
+        opacity: 0.8; 
+      }
+      .no-match-message { 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        text-align: left; 
+      }
+      .no-match-team-name { 
+        font-size: 17px; 
+        font-weight: 800; 
+        letter-spacing: 0.5px; 
+        color: var(--primary-text-color); 
+        line-height: 1.2; 
+        margin-bottom: 2px; 
+      }
+      .no-match-title { 
+        font-size: 14px; 
+        font-weight: 500; 
+        opacity: 0.85; 
+        color: var(--primary-text-color); 
+      }
+      .no-match-date { 
+        font-size: 16px; 
+        font-weight: 700; 
+        opacity: 0.95; 
+        margin-top: 2px; 
+        color: var(--primary-text-color); 
+      }
+      .ultra-off-season { 
+        padding: 12px 16px; 
+      }
 
       .info-footer { padding: 6px 12px 0; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
       .venue { font-weight: bold; margin-bottom: 4px; }

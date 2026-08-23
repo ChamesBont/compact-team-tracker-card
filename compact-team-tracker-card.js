@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.10.0 !!!");
+console.log("!!! TEAM TRACKER v2.0.9.2  !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -924,8 +924,6 @@ class CompactTeamTracker extends LitElement {
         width: 56px; 
         height: 56px; 
         border-radius: 50%; 
-        background: rgba(255, 255, 255, 0.06); 
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); 
         flex-shrink: 0; 
       }
       .off-season-logo { 

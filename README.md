@@ -44,6 +44,8 @@ Multiple options for customization.
 * **Auto-Cleanup:** Automatically hide finished matches from previous days at midnight.
 * **Scoring Plays:** Optional list of scorers for live and finished matches, including timestamps.
 * **Custom background color:** Set your own background color for each Team.
+* **Score Delimiter Option:** Choose between colon (:) and dash (-) as the score separator.
+* **Home Team Position:** Display the home team on the Left (European standard) or Right (US style: Away @ Home).
 * **Multi-Language:** Built-in support for **English** and **German** (auto-detected from Home Assistant settings).
 
 ---

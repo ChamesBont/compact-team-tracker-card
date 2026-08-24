@@ -55,7 +55,7 @@ Multiple options for customization.
 ### Method 1: via HACS (recommended):
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ChamesBont&repository=compact-team-tracker-card&category=Lovelace)
 
-### Method 2: Manually add repository to HACS (recommended):
+### Method 2: Manually add repository to HACS:
 
 1. Open HACS section in Home Assistant.
 2. Click on the 3 dots in the top right corner.

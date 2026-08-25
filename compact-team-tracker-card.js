@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.0-beta5 !!!");
+console.log("!!! TEAM TRACKER v2.1.0-beta6 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -941,6 +941,28 @@ class CompactTeamTracker extends LitElement {
     `;
   }
 
+  _renderLogoBox(side, shadowClass, isUltra = false) {
+    const isTBD = !side.mainLogo || side.name === "TBD";
+    const logoClass = isUltra 
+      ? `ultra-logo ${side.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}`
+      : `team-logo ${side.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}`;
+    const flagClass = isUltra ? "flag-circle-badge-ultra" : "flag-circle-badge";
+    const fallbackClass = isUltra ? "tbd-placeholder-ultra" : "tbd-placeholder";
+
+    return html`
+      <div class="${isUltra ? 'ultra-logo-wrap' : 'logo-badge-container'}">
+        ${!isTBD ? html`
+          <img src="${side.mainLogo}" class="${logoClass}" @error="${(e) => { e.target.style.display = 'none'; e.target.nextElementSibling?.classList.remove('has-img'); }}">
+          ${side.flag ? html`<img src="${side.flag}" class="${flagClass}" @error="${e => e.target.style.display='none'}">` : ''}
+        ` : html`
+          <div class="${fallbackClass}">
+            <ha-icon icon="mdi:help" style="${isUltra ? '--mdc-icon-size: 16px;' : '--mdc-icon-size: 24px;'} opacity: 0.6;"></ha-icon>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
   renderMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
@@ -986,10 +1008,7 @@ class CompactTeamTracker extends LitElement {
         <div class="content ${!showLeague && s !== 'IN' && (!sides.isIndividual || !a.event_name) ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
-              <div class="logo-badge-container">
-                ${sides.team.mainLogo ? html`<img src="${sides.team.mainLogo}" class="team-logo ${sides.team.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-                ${sides.team.flag ? html`<img src="${sides.team.flag}" class="flag-circle-badge" @error="${e => e.target.style.display='none'}">` : ''}
-              </div>
+              ${this._renderLogoBox(sides.team, shadowClass, false)}
               <div class="name">${sides.team.name}</div>
               ${sides.team.rec ? html`<div class="record">${sides.team.rec}</div>` : ''}
             </div>
@@ -1001,10 +1020,7 @@ class CompactTeamTracker extends LitElement {
             </div>
           ` : html`
             <div class="team-box">
-              <div class="logo-badge-container">
-                ${sides.left.mainLogo ? html`<img src="${sides.left.mainLogo}" class="team-logo ${sides.left.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-                ${sides.left.flag ? html`<img src="${sides.left.flag}" class="flag-circle-badge" @error="${e => e.target.style.display='none'}">` : ''}
-              </div>
+              ${this._renderLogoBox(sides.left, shadowClass, false)}
               <div class="name">${sides.left.name}</div>
               ${this.config.show_record && sides.left.rec ? html`<div class="record">${sides.left.rec}</div>` : ''}
             </div>
@@ -1015,10 +1031,7 @@ class CompactTeamTracker extends LitElement {
               }
             </div>
             <div class="team-box">
-              <div class="logo-badge-container">
-                ${sides.right.mainLogo ? html`<img src="${sides.right.mainLogo}" class="team-logo ${sides.right.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-                ${sides.right.flag ? html`<img src="${sides.right.flag}" class="flag-circle-badge" @error="${e => e.target.style.display='none'}">` : ''}
-              </div>
+              ${this._renderLogoBox(sides.right, shadowClass, false)}
               <div class="name">${sides.right.name}</div>
               ${this.config.show_record && sides.right.rec ? html`<div class="record">${sides.right.rec}</div>` : ''}
             </div>
@@ -1062,10 +1075,7 @@ class CompactTeamTracker extends LitElement {
       <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
         ${sides.isRacing ? html`
           <div class="ultra-team left">
-            <div class="ultra-logo-wrap">
-              ${sides.team.mainLogo ? html`<img src="${sides.team.mainLogo}" class="ultra-logo ${sides.team.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-              ${sides.team.flag ? html`<img src="${sides.team.flag}" class="flag-circle-badge-ultra" @error="${e => e.target.style.display='none'}">` : ''}
-            </div>
+            ${this._renderLogoBox(sides.team, shadowClass, true)}
             <span class="ultra-abbr">${sides.team.name}</span>
           </div>
           <div class="ultra-info">
@@ -1077,10 +1087,7 @@ class CompactTeamTracker extends LitElement {
           <div class="ultra-team right">${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}</div>
         ` : html`
           <div class="ultra-team left">
-            <div class="ultra-logo-wrap">
-              ${sides.left.mainLogo ? html`<img src="${sides.left.mainLogo}" class="ultra-logo ${sides.left.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-              ${sides.left.flag ? html`<img src="${sides.left.flag}" class="flag-circle-badge-ultra" @error="${e => e.target.style.display='none'}">` : ''}
-            </div>
+            ${this._renderLogoBox(sides.left, shadowClass, true)}
             <span class="ultra-abbr">${sides.left.name}</span>
           </div>
           <div class="ultra-info">
@@ -1091,10 +1098,7 @@ class CompactTeamTracker extends LitElement {
           </div>
           <div class="ultra-team right">
             <span class="ultra-abbr">${sides.right.name}</span>
-            <div class="ultra-logo-wrap">
-              ${sides.right.mainLogo ? html`<img src="${sides.right.mainLogo}" class="ultra-logo ${sides.right.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-              ${sides.right.flag ? html`<img src="${sides.right.flag}" class="flag-circle-badge-ultra" @error="${e => e.target.style.display='none'}">` : ''}
-            </div>
+            ${this._renderLogoBox(sides.right, shadowClass, true)}
           </div>
         `}
       </div>
@@ -1132,10 +1136,32 @@ class CompactTeamTracker extends LitElement {
       .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
       .team-box.single-side { flex: 1.5; }
       
-      .logo-badge-container { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+      .logo-badge-container { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; }
       .team-logo { width: 48px; height: 48px; object-fit: contain; }
       .team-logo.individual-headshot { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
       
+      /* TBD PLATZHALTER */
+      .tbd-placeholder { 
+        width: 48px; 
+        height: 48px; 
+        border-radius: 50%; 
+        border: 1.5px dashed var(--divider-color, rgba(255,255,255,0.2)); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        background: rgba(128, 128, 128, 0.05); 
+      }
+      .tbd-placeholder-ultra { 
+        width: 28px; 
+        height: 28px; 
+        border-radius: 50%; 
+        border: 1px dashed var(--divider-color, rgba(255,255,255,0.2)); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        background: rgba(128, 128, 128, 0.05); 
+      }
+
       /* KREISRUNDE FLAGGE OBEN RECHTS */
       .flag-circle-badge { 
         position: absolute; 
@@ -1143,7 +1169,10 @@ class CompactTeamTracker extends LitElement {
         right: -6px; 
         width: 18px; 
         height: 18px; 
+        border-radius: 50%; 
         object-fit: cover; 
+        border: 1.5px solid var(--card-background-color, #1c1c1e); 
+        box-shadow: 0 1px 4px rgba(0,0,0,0.4); 
         z-index: 2; 
       }
       

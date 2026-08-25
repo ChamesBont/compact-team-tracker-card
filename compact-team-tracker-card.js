@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9.4 !!!");
+console.log("!!! TEAM TRACKER v2.0.9.4-beta2 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -43,8 +43,10 @@ const LANG = {
     delimiter_dash: "Bindestrich ( - )",
     match_info_section: "Spiel-Informationen",
     next_only: "Nur das nächste/aktuelle Spiel anzeigen",
-    hide_finished: "Beendete & spielfreie Tage ausblenden",
-    hide_finished_help: "Versteckt vergangene Spiele sowie Teams ohne anstehende Spiele.",
+    hide_finished: "Beendete Spiele ausblenden",
+    hide_finished_help: "Versteckt Spiele vom Vortag automatisch um Mitternacht.",
+    hide_offseason: "Spielfreie Teams / Off-Season ausblenden",
+    hide_offseason_help: "Versteckt Teams ohne aktuell angesetzte Partien (z. B. Sommerpause/Pokal).",
     show_sun: "Statistiken (S-U-N) anzeigen",
     live_details_section: "Live-Details",
     show_last_play: "Letzten Spielzug anzeigen",
@@ -57,8 +59,7 @@ const LANG = {
     finished: "Beendet",
     live: "LIVE",
     no_upcoming_games: "Keine anstehenden Spiele",
-    bye_week: "Spielfrei (Bye-Week)",
-    until: "bis"
+    bye_week: "Spielfrei (Bye-Week)"
   },
   en: {
     manage_teams: "Manage Teams",
@@ -81,8 +82,10 @@ const LANG = {
     delimiter_dash: "Dash ( - )",
     match_info_section: "Match Information",
     next_only: "Show only next/current match",
-    hide_finished: "Hide finished & off-season matches",
-    hide_finished_help: "Hides past matches and sensors without scheduled games.",
+    hide_finished: "Hide finished matches",
+    hide_finished_help: "Automatically hides matches from previous days at midnight.",
+    hide_offseason: "Hide off-season / unscheduled teams",
+    hide_offseason_help: "Hides teams without currently scheduled matches.",
     show_sun: "Show statistics (W-D-L)",
     live_details_section: "Live Details",
     show_last_play: "Show last play",
@@ -95,8 +98,7 @@ const LANG = {
     finished: "Finished",
     live: "LIVE",
     no_upcoming_games: "No upcoming matches",
-    bye_week: "Bye Week",
-    until: "until"
+    bye_week: "Bye Week"
   }
 };
 
@@ -309,6 +311,7 @@ class CompactTeamTrackerEditor extends LitElement {
             </ha-switch>
             <span>${t.next_only}</span>
           </div>
+          
           <div class="switch-row">
             <ha-switch 
               .checked="${this._config.only_today === true}" 
@@ -318,6 +321,17 @@ class CompactTeamTrackerEditor extends LitElement {
             <span>${t.hide_finished}</span>
           </div>
           <p class="help-text">${t.hide_finished_help}</p>
+
+          <div class="switch-row">
+            <ha-switch 
+              .checked="${this._config.hide_offseason === true}" 
+              .configValue="${"hide_offseason"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.hide_offseason}</span>
+          </div>
+          <p class="help-text">${t.hide_offseason_help}</p>
+
           <div class="switch-row ${isUltra ? 'disabled' : ''}">
             <ha-switch 
               .checked="${this._config.show_record === true}" 
@@ -540,7 +554,7 @@ class CompactTeamTracker extends LitElement {
   }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
@@ -637,27 +651,6 @@ class CompactTeamTracker extends LitElement {
     return a.league_logo || null;
   }
 
-  _resolveOffSeasonDate(attributes) {
-    if (attributes.date) {
-      const parsed = new Date(attributes.date);
-      if (!isNaN(parsed.getTime())) {
-        return parsed.toLocaleDateString([], { day: 'numeric', month: 'numeric', year: 'numeric' });
-      }
-    }
-
-    if (attributes.api_message) {
-      const match = attributes.api_message.match(/and\s+([0-9]{4}-[0-9]{2}-[0-9]{2}(?:T[0-9:]+Z?)?)/i);
-      if (match && match[1]) {
-        const parsed = new Date(match[1]);
-        if (!isNaN(parsed.getTime())) {
-          return parsed.toLocaleDateString([], { day: 'numeric', month: 'numeric', year: 'numeric' });
-        }
-      }
-    }
-
-    return null;
-  }
-
   _getMatchSides(a) {
     const isHome = a.team_homeaway === 'home';
     const homeTeam = { 
@@ -741,10 +734,17 @@ class CompactTeamTracker extends LitElement {
     const todayStr = new Date().toISOString().split('T')[0];
     let filteredList = uniqueStates.filter(s => {
       const isOffSeason = s.state === 'NOT_FOUND' || s.state === 'BYE' || (!s.attributes.opponent_abbr && !s.attributes.date);
-      if (this.config.only_today === true) {
-        if (isOffSeason) return false;
-        if (s.state === 'POST') return s.attributes.date?.split('T')[0] === todayStr;
+      
+      // 1. Spielfreie Teams / Offseason ausblenden
+      if (this.config.hide_offseason === true && isOffSeason) {
+        return false;
       }
+
+      // 2. Beendete Spiele von Vortagen ausblenden
+      if (this.config.only_today === true && s.state === 'POST') {
+        return s.attributes.date?.split('T')[0] === todayStr;
+      }
+
       return true;
     });
 
@@ -826,7 +826,6 @@ class CompactTeamTracker extends LitElement {
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const showLeague = this.config.show_league !== false;
     const logoUrl = this._resolveBestTeamLogo(entityObj);
-    const formattedDate = this._resolveOffSeasonDate(a);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
     return html`
@@ -851,9 +850,6 @@ class CompactTeamTracker extends LitElement {
           <div class="no-match-message">
             <div class="no-match-team-name">${a.team_name || a.team_abbr || ''}</div>
             <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
-            ${formattedDate ? html`
-              <div class="no-match-date">${t.until} ${formattedDate}</div>
-            ` : ''}
           </div>
         </div>
       </div>
@@ -867,7 +863,6 @@ class CompactTeamTracker extends LitElement {
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const logoUrl = this._resolveBestTeamLogo(entityObj);
-    const formattedDate = this._resolveOffSeasonDate(a);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
     return html`
@@ -878,7 +873,7 @@ class CompactTeamTracker extends LitElement {
         </div>
         <div class="ultra-info">
           <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
-            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games} ${formattedDate ? `(${t.until} ${formattedDate})` : ''}
+            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
           </span>
         </div>
         <div class="ultra-team right">
@@ -1059,13 +1054,6 @@ class CompactTeamTracker extends LitElement {
         opacity: 0.85; 
         color: var(--primary-text-color); 
       }
-      .no-match-date { 
-        font-size: 16px; 
-        font-weight: 700; 
-        opacity: 0.95; 
-        margin-top: 2px; 
-        color: var(--primary-text-color); 
-      }
       .ultra-off-season { 
         padding: 12px 16px; 
       }
@@ -1090,6 +1078,7 @@ class CompactTeamTracker extends LitElement {
       .live-text-large { font-size: 22px; font-weight: 900; color: #e74c3c; }
       .ultra-subtext { font-size: 10px; opacity: 0.7; font-weight: bold; display: flex; flex-direction: column; }
       
+      /* ZENTRIERTER LIVE-BALKEN (~1/3 HÖHE) */
       .live-border::before {
         content: '';
         position: absolute;

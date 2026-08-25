@@ -76,20 +76,28 @@ Multiple options for customization.
 
 ---
 
-## 🛠 Configuration Options
+### ⚙️ Configuration Options
 
-The card features a full **Graphic User Interface (GUI)** editor. No YAML coding required!
-
-| Option | Description |
-| :--- | :--- |
-| `entities` | **(Required)** A list of one or more team_tracker sensor entities. |
-| `priority_entity` | Select a main sensor that will be prioritized if multiple games start at the exact same time. |
-| `show_next_only` | If enabled, only the next or currently active match will be displayed. |
-| `layout` | Set to `ultra` for an even more compact one-line view of the matches. |
-| `show_league` | Toggle the display of league names and logos (e.g., German Bundesliga , UEFA Champions League, ...). |
-| `only_today` | Automatically hides finished matches from previous days at midnight. |
-| `show_record` | Displays the current win-draw-loss record (W-D-L) for both teams. |
-| `show_last_play` | **(New)** Shows a short text summary of the most recent play during live games. |
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `type` | string | **Required** | `custom:compact-team-tracker` |
+| `entities` | list | **Required** | List of entity IDs from the `team-tracker` integration. |
+| `layout` | string | `standard` | Card layout style. Options: `standard` or `ultra`. |
+| `slider` | boolean | `false` | Enables carousel / slider view with swipe/navigation dots. |
+| `show_league` | boolean | `true` | Displays the league name and logo in the card header (standard mode). |
+| `logo_shadow` | boolean | `false` | Highlights team logos and athlete portraits with a subtle glow/drop-shadow. |
+| `show_location` | boolean | `true` | Shows venue and match location in the card footer. |
+| `show_tv_network` | boolean | `true` | Displays broadcasting TV network or streaming channel in the footer. |
+| `home_team_position` | string | `left` | Alignment of the home team. Options: `left` (European standard) or `right` (US Away @ Home). |
+| `score_delimiter` | string | `:` | Separator symbol between scores. Options: `:` or `-`. |
+| `show_next_only` | boolean | `false` | Displays only the next chronologically upcoming match (ignored when `slider: true`). |
+| `only_today` | boolean | `false` | Hides finished games (`POST`) from previous days at midnight. |
+| `hide_offseason` | boolean | `false` | Hides teams currently in off-season, bye weeks, or without scheduled matches (`NOT_FOUND` / `BYE`). |
+| `show_record` | boolean | `false` | Shows season statistics (e.g., Win-Draw-Loss record) below the team name. |
+| `show_last_play` | boolean | `true` | Displays a summary text of the latest play during live games. |
+| `last_play_marquee` | boolean | `false` | Enables smooth scrolling ticker animation for the last play text. |
+| `priority_entity` | string | *optional* | Primary team sensor ID. Prioritized for simultaneous kickoffs and card background coloring. |
+| `team_colors` | map | *optional* | Custom HEX background colors mapped per entity (e.g. `sensor.team_tracker: "#1c1c1e"`). |
 
 ---
 

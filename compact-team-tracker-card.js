@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.0-beta3 !!!");
+console.log("!!! TEAM TRACKER v2.1.0-beta4 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -971,8 +971,12 @@ class CompactTeamTracker extends LitElement {
             </div>
           </div>
         ` : ''}
+
+        ${a.event_name && a.event_name !== (a.league_name || a.league) ? html`
+          <div class="event-name-banner">${a.event_name}</div>
+        ` : ''}
         
-        <div class="content ${!showLeague && s !== 'IN' ? 'extra-padding' : ''}">
+        <div class="content ${!showLeague && s !== 'IN' && !a.event_name ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
               <div class="logo-badge-container">
@@ -1103,6 +1107,19 @@ class CompactTeamTracker extends LitElement {
       .live-status { color: #e74c3c; display: flex; align-items: center; }
       .status-post { opacity: 0.7; }
       .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
+      
+      /* EVENT NAME BANNER */
+      .event-name-banner {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        color: var(--primary-text-color);
+        opacity: 0.9;
+        padding: 6px 12px 0;
+        line-height: 1.2;
+      }
+
       .content { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; width: 100%; box-sizing: border-box; }
       .extra-padding { padding-top: 12px; }
       .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }

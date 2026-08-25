@@ -30,7 +30,7 @@ Another space-saving view.
 ### Visual Editor
 Multiple options for customization.
 
-![Ultra-Compact View](screenshots/Screenshot_compact_team_tracker_card_3.png)
+![Ultra-Compact View](screenshots/Screenshot_compact_team_tracker_card_3_new.png)
 
 ![Ultra-Compact View](screenshots/Screenshot_compact_team_tracker_card_5.png)
 

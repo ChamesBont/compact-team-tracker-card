@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9.4-beta3 !!!");
+console.log("!!! TEAM TRACKER v2.0.9.4 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -996,7 +996,7 @@ class CompactTeamTracker extends LitElement {
       .extra-padding { padding-top: 12px; }
       .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
       .team-logo { width: 48px; height: 48px; object-fit: contain; }
-      .custom-logo-shadow { filter: drop-shadow(0 0 6px #d3d3d3) !important; }
+      .custom-logo-shadow { filter: drop-shadow(0 0 2px #d3d3d3) !important; }
       .name { font-size: 14px; font-weight: 800; margin-top: 4px; }
       .record { font-size: 10px; opacity: 0.6; }
       .score-area { flex: 1.5; display: flex; justify-content: center; align-items: center; }

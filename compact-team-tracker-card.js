@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9.4-beta4 !!!");
+console.log("!!! TEAM TRACKER v2.1.0-beta1 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -629,12 +629,36 @@ class CompactTeamTracker extends LitElement {
     return null;
   }
 
+  _cleanName(abbr, name) {
+    if (abbr && abbr.trim() !== "" && abbr.trim() !== "*") return abbr;
+    if (name && name.trim() !== "" && name.trim() !== "*") return name;
+    return "TBD";
+  }
+
+  _resolveAthleteData(a, isOpponent = false) {
+    const prefix = isOpponent ? "opponent_" : "team_";
+    const headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
+    const rawLogo = a[`${prefix}logo`] || null;
+    const flag = a[`${prefix}flag`] || a[`${prefix}country_flag`] || (headshot && rawLogo ? rawLogo : null);
+    const mainLogo = headshot || rawLogo;
+    const name = this._cleanName(a[`${prefix}abbr`], a[`${prefix}name`]);
+
+    return {
+      mainLogo: mainLogo,
+      flag: (mainLogo && flag && mainLogo !== flag) ? flag : null,
+      name: name,
+      score: a[`${prefix}score`],
+      rec: a[`${prefix}record`]
+    };
+  }
+
   _resolveBestTeamLogo(stateObj) {
     const a = stateObj.attributes;
-    if (a.team_logo) return a.team_logo;
+    const d = this._resolveAthleteData(a, false);
+    if (d.mainLogo) return d.mainLogo;
 
     const myAbbr = a.team_abbr || a.team_name;
-    if (myAbbr) {
+    if (myAbbr && myAbbr !== "*") {
       const entities = this.config.entities || [];
       for (const entId of entities) {
         const otherState = this.hass.states[entId];
@@ -651,50 +675,38 @@ class CompactTeamTracker extends LitElement {
   }
 
   _getMatchSides(a) {
-    // 1. Motorsport / Racing / Golf Check (Kein direkter 1-vs-1 Kontrahent)
     const isRacingOrEvent = !a.opponent_name && !a.opponent_abbr && (a.position !== undefined || a.event_name);
 
     if (isRacingOrEvent) {
+      const athlete = this._resolveAthleteData(a, false);
       return {
         isRacing: true,
         team: {
-          logo: a.team_logo || a.league_logo,
-          name: a.team_name || a.team_abbr || 'Driver/Team',
+          mainLogo: athlete.mainLogo || a.league_logo,
+          flag: athlete.flag,
+          name: athlete.name,
           pos: a.position !== undefined ? a.position : null,
           rec: a.team_record || null
         }
       };
     }
 
-    // 2. Head-to-Head / Matchplay (Teamsport oder Individualsport wie MMA/Tennis)
     let isHome = true;
     if (a.team_homeaway === 'away') {
       isHome = false;
-    } else if (a.team_homeaway === 'home') {
-      isHome = true;
-    } else {
-      // Wenn team_homeaway nicht gesetzt ist (z.B. MMA/Boxen neutrale Arena)
-      isHome = true;
     }
 
-    const homeTeam = { 
-      logo: isHome ? a.team_logo : a.opponent_logo, 
-      abbr: (isHome ? a.team_abbr : a.opponent_abbr) || (isHome ? a.team_name : a.opponent_name) || 'TBD', 
-      score: isHome ? a.team_score : a.opponent_score, 
-      rec: isHome ? a.team_record : a.opponent_record 
-    };
-    const awayTeam = { 
-      logo: isHome ? a.opponent_logo : a.team_logo, 
-      abbr: (isHome ? a.opponent_abbr : a.team_abbr) || (isHome ? a.opponent_name : a.team_name) || 'TBD', 
-      score: isHome ? a.opponent_score : a.team_score, 
-      rec: isHome ? a.opponent_record : a.team_record 
-    };
+    const teamData = this._resolveAthleteData(a, false);
+    const oppData = this._resolveAthleteData(a, true);
+
+    const homeSide = isHome ? teamData : oppData;
+    const awaySide = isHome ? oppData : teamData;
 
     const isHomeLeft = (this.config.home_team_position || 'left') === 'left';
     return {
       isRacing: false,
-      left: isHomeLeft ? homeTeam : awayTeam,
-      right: isHomeLeft ? awayTeam : homeTeam
+      left: isHomeLeft ? homeSide : awaySide,
+      right: isHomeLeft ? awaySide : homeSide
     };
   }
 
@@ -711,7 +723,6 @@ class CompactTeamTracker extends LitElement {
       `;
     }
 
-    // Erweiterter Filter: Schließt auch Rennsport- und Individual-Sensoren ein
     const states = entities
       .map(id => this.hass.states[id])
       .filter(s => s && s.attributes && (s.attributes.team_abbr || s.attributes.team_name || s.attributes.league || s.attributes.sport));
@@ -857,6 +868,7 @@ class CompactTeamTracker extends LitElement {
     const showLeague = this.config.show_league !== false;
     const logoUrl = this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
+    const teamName = this._cleanName(a.team_name, a.team_abbr);
 
     return html`
       <div class="card-wrapper off-season-card" style="${customStyle}">
@@ -878,7 +890,7 @@ class CompactTeamTracker extends LitElement {
               <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>`}
           </div>
           <div class="no-match-message">
-            <div class="no-match-team-name">${a.team_name || a.team_abbr || ''}</div>
+            <div class="no-match-team-name">${teamName}</div>
             <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
           </div>
         </div>
@@ -894,12 +906,13 @@ class CompactTeamTracker extends LitElement {
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const logoUrl = this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
+    const teamName = this._cleanName(a.team_abbr, a.team_name);
 
     return html`
       <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
         <div class="ultra-team left">
           ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-          <span class="ultra-abbr">${a.team_abbr || a.team_name || 'TBD'}</span>
+          <span class="ultra-abbr">${teamName}</span>
         </div>
         <div class="ultra-info">
           <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
@@ -954,7 +967,10 @@ class CompactTeamTracker extends LitElement {
         <div class="content ${!showLeague && s !== 'IN' ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
-              ${sides.team.logo ? html`<img src="${sides.team.logo}" class="team-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+              <div class="logo-badge-container">
+                ${sides.team.mainLogo ? html`<img src="${sides.team.mainLogo}" class="team-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+                ${sides.team.flag ? html`<img src="${sides.team.flag}" class="mini-flag" @error="${e => e.target.style.display='none'}">` : ''}
+              </div>
               <div class="name">${sides.team.name}</div>
               ${sides.team.rec ? html`<div class="record">${sides.team.rec}</div>` : ''}
             </div>
@@ -965,14 +981,28 @@ class CompactTeamTracker extends LitElement {
               }
             </div>
           ` : html`
-            <div class="team-box">${sides.left.logo ? html`<img src="${sides.left.logo}" class="team-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}<div class="name">${sides.left.abbr}</div>${this.config.show_record && sides.left.rec ? html`<div class="record">${sides.left.rec}</div>` : ''}</div>
+            <div class="team-box">
+              <div class="logo-badge-container">
+                ${sides.left.mainLogo ? html`<img src="${sides.left.mainLogo}" class="team-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+                ${sides.left.flag ? html`<img src="${sides.left.flag}" class="mini-flag" @error="${e => e.target.style.display='none'}">` : ''}
+              </div>
+              <div class="name">${sides.left.name}</div>
+              ${this.config.show_record && sides.left.rec ? html`<div class="record">${sides.left.rec}</div>` : ''}
+            </div>
             <div class="score-area">
               ${s === 'PRE' 
                 ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>` 
                 : html`<div class="score-nums">${sides.left.score !== undefined ? sides.left.score : 0} ${delim} ${sides.right.score !== undefined ? sides.right.score : 0}</div>`
               }
             </div>
-            <div class="team-box">${sides.right.logo ? html`<img src="${sides.right.logo}" class="team-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}<div class="name">${sides.right.abbr}</div>${this.config.show_record && sides.right.rec ? html`<div class="record">${sides.right.rec}</div>` : ''}</div>
+            <div class="team-box">
+              <div class="logo-badge-container">
+                ${sides.right.mainLogo ? html`<img src="${sides.right.mainLogo}" class="team-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+                ${sides.right.flag ? html`<img src="${sides.right.flag}" class="mini-flag" @error="${e => e.target.style.display='none'}">` : ''}
+              </div>
+              <div class="name">${sides.right.name}</div>
+              ${this.config.show_record && sides.right.rec ? html`<div class="record">${sides.right.rec}</div>` : ''}
+            </div>
           `}
         </div>
 
@@ -1012,7 +1042,13 @@ class CompactTeamTracker extends LitElement {
     return html`
       <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
         ${sides.isRacing ? html`
-          <div class="ultra-team left">${sides.team.logo ? html`<img src="${sides.team.logo}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}<span class="ultra-abbr">${sides.team.name}</span></div>
+          <div class="ultra-team left">
+            <div class="ultra-logo-wrap">
+              ${sides.team.mainLogo ? html`<img src="${sides.team.mainLogo}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+              ${sides.team.flag ? html`<img src="${sides.team.flag}" class="mini-flag-ultra" @error="${e => e.target.style.display='none'}">` : ''}
+            </div>
+            <span class="ultra-abbr">${sides.team.name}</span>
+          </div>
           <div class="ultra-info">
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
@@ -1021,14 +1057,26 @@ class CompactTeamTracker extends LitElement {
           </div>
           <div class="ultra-team right">${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}</div>
         ` : html`
-          <div class="ultra-team left">${sides.left.logo ? html`<img src="${sides.left.logo}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}<span class="ultra-abbr">${sides.left.abbr}</span></div>
+          <div class="ultra-team left">
+            <div class="ultra-logo-wrap">
+              ${sides.left.mainLogo ? html`<img src="${sides.left.mainLogo}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+              ${sides.left.flag ? html`<img src="${sides.left.flag}" class="mini-flag-ultra" @error="${e => e.target.style.display='none'}">` : ''}
+            </div>
+            <span class="ultra-abbr">${sides.left.name}</span>
+          </div>
           <div class="ultra-info">
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
               : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
             }
           </div>
-          <div class="ultra-team right"><span class="ultra-abbr">${sides.right.abbr}</span>${sides.right.logo ? html`<img src="${sides.right.logo}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}</div>
+          <div class="ultra-team right">
+            <span class="ultra-abbr">${sides.right.name}</span>
+            <div class="ultra-logo-wrap">
+              ${sides.right.mainLogo ? html`<img src="${sides.right.mainLogo}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+              ${sides.right.flag ? html`<img src="${sides.right.flag}" class="mini-flag-ultra" @error="${e => e.target.style.display='none'}">` : ''}
+            </div>
+          </div>
         `}
       </div>
     `;
@@ -1051,9 +1099,16 @@ class CompactTeamTracker extends LitElement {
       .extra-padding { padding-top: 12px; }
       .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
       .team-box.single-side { flex: 1.5; }
+      
+      .logo-badge-container { display: flex; flex-direction: column; align-items: center; position: relative; }
       .team-logo { width: 48px; height: 48px; object-fit: contain; }
+      .mini-flag { width: 18px; height: 12px; object-fit: cover; border-radius: 2px; margin-top: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+      
+      .ultra-logo-wrap { display: flex; flex-direction: column; align-items: center; }
+      .mini-flag-ultra { width: 14px; height: 9px; object-fit: cover; border-radius: 1px; margin-top: 1px; }
+
       .custom-logo-shadow { filter: drop-shadow(0 0 6px #d3d3d3) !important; }
-      .name { font-size: 14px; font-weight: 800; margin-top: 4px; }
+      .name { font-size: 14px; font-weight: 800; margin-top: 4px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .record { font-size: 10px; opacity: 0.6; }
       .score-area { flex: 1.5; display: flex; justify-content: center; align-items: center; }
       .kickoff-wrapper { text-align: center; }
@@ -1130,7 +1185,7 @@ class CompactTeamTracker extends LitElement {
       .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
       .ultra-team.right { justify-content: flex-end; }
       .ultra-logo { width: 28px; height: 28px; object-fit: contain; }
-      .ultra-abbr { font-size: 14px; font-weight: 800; }
+      .ultra-abbr { font-size: 14px; font-weight: 800; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .ultra-info { flex: 1.2; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
       .ultra-score, .ultra-main-text { font-size: 18px; font-weight: 900; }
       .live-text-large { font-size: 22px; font-weight: 900; color: #e74c3c; }

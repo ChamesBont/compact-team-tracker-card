@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.0-beta2 !!!");
+console.log("!!! TEAM TRACKER v2.1.0-beta3 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -32,9 +32,9 @@ const LANG = {
     ultra_layout: "Ultra-Compact-Layout",
     slider_layout: "Als Karussell / Slider anzeigen",
     show_league: "Kopfzeile anzeigen",
-    logo_shadow: "Wappen-Schatten hervorheben",
-    show_location: "Spielort / Location anzeigen",
-    show_tv_network: "TV-Sender / Stream anzeigen",
+    logo_shadow: "Wappen/Profilbild hervorheben",
+    show_location: "Spielort anzeigen",
+    show_tv_network: "TV-Sender anzeigen",
     home_position_label: "Heimteam-Position",
     home_left: "Links (Europäischer Standard)",
     home_right: "Rechts (US / Away @ Home)",
@@ -45,7 +45,7 @@ const LANG = {
     next_only: "Nur das nächste/aktuelle Spiel anzeigen",
     hide_finished: "Beendete Spiele ausblenden",
     hide_finished_help: "Versteckt Spiele vom Vortag automatisch um Mitternacht.",
-    hide_offseason: "Spielfreie Teams / Off-Season ausblenden",
+    hide_offseason: "Spielfreie Teams ausblenden",
     hide_offseason_help: "Versteckt Teams ohne aktuell angesetzte Partien (z. B. Sommerpause/Pokal).",
     show_sun: "Statistiken (S-U-N) anzeigen",
     live_details_section: "Live-Details",
@@ -53,13 +53,13 @@ const LANG = {
     last_play_help: "Zeigt bei Live-Spielen eine Textzusammenfassung des letzten Spielzugs an.",
     last_play_marquee: "Lauftext für letzten Spielzug nutzen",
     no_entities: "Bitte füge in der Konfiguration Teams hinzu, um die Vorschau zu sehen.",
-    bg_color: "Hintergrundfarbe (optional):",
+    bg_color: "Hintergrundfarbe:",
     reset: "Zurücksetzen",
     scheduled: "Geplant",
     finished: "Beendet",
     live: "LIVE",
     no_upcoming_games: "Keine anstehenden Spiele",
-    bye_week: "Spielfrei (Bye-Week)",
+    bye_week: "Spielfrei",
     pos: "Pos."
   },
   en: {
@@ -72,9 +72,9 @@ const LANG = {
     ultra_layout: "Ultra-compact layout",
     slider_layout: "Display as carousel / slider",
     show_league: "Show card header",
-    logo_shadow: "Highlight logo glow / shadow",
-    show_location: "Show match location / venue",
-    show_tv_network: "Show TV network / broadcast",
+    logo_shadow: "Highlight logo/profile picture",
+    show_location: "Show match location",
+    show_tv_network: "Show TV broadcast",
     home_position_label: "Home team position",
     home_left: "Left (European standard)",
     home_right: "Right (US / Away @ Home)",
@@ -85,7 +85,7 @@ const LANG = {
     next_only: "Show only next/current match",
     hide_finished: "Hide finished matches",
     hide_finished_help: "Automatically hides matches from previous days at midnight.",
-    hide_offseason: "Hide off-season / unscheduled teams",
+    hide_offseason: "Hide unscheduled teams",
     hide_offseason_help: "Hides teams without currently scheduled matches.",
     show_sun: "Show statistics (W-D-L)",
     live_details_section: "Live Details",
@@ -93,7 +93,7 @@ const LANG = {
     last_play_help: "Displays a text summary of the most recent play during live games.",
     last_play_marquee: "Use marquee for last play",
     no_entities: "Please add teams in the configuration to see the preview.",
-    bg_color: "Background color (optional):",
+    bg_color: "Background color:",
     reset: "Reset",
     scheduled: "Scheduled",
     finished: "Finished",
@@ -642,7 +642,6 @@ class CompactTeamTracker extends LitElement {
     const id = a[`${prefix}id`] || a[`${prefix}athlete_id`] || a[`${prefix}player_id`] || null;
     const sport = (a.sport || a.league || "mma").toLowerCase();
 
-    // Fallback: Wenn kein direktes Headshot-Attribut da ist, aber eine ID existiert (z.B. MMA/UFC, Tennis, Golf)
     if (!headshot && id && (sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("racing") || sport.includes("f1"))) {
       const sportKey = (sport.includes("mma") || sport.includes("ufc")) ? "mma" : (sport.includes("tennis") ? "tennis" : (sport.includes("golf") ? "golf" : "racing"));
       headshot = `https://a.espncdn.com/i/headshots/${sportKey}/players/full/${id}.png`;
@@ -1117,7 +1116,18 @@ class CompactTeamTracker extends LitElement {
       .mini-flag-ultra { width: 14px; height: 9px; object-fit: cover; border-radius: 1px; margin-top: 1px; }
 
       .custom-logo-shadow { filter: drop-shadow(0 0 6px #d3d3d3) !important; }
-      .name { font-size: 14px; font-weight: 800; margin-top: 4px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      
+      /* VOLLSTÄNDIGER NAME OHNE ABSCHNEIDEN MIT SCHÖNEM UMBRUCH */
+      .name { 
+        font-size: 13px; 
+        font-weight: 800; 
+        margin-top: 4px; 
+        max-width: 130px; 
+        white-space: normal; 
+        line-height: 1.15; 
+        word-break: normal; 
+        text-align: center; 
+      }
       .record { font-size: 10px; opacity: 0.6; }
       .score-area { flex: 1.5; display: flex; justify-content: center; align-items: center; }
       .kickoff-wrapper { text-align: center; }
@@ -1194,7 +1204,18 @@ class CompactTeamTracker extends LitElement {
       .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
       .ultra-team.right { justify-content: flex-end; }
       .ultra-logo { width: 28px; height: 28px; object-fit: contain; }
-      .ultra-abbr { font-size: 14px; font-weight: 800; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      
+      /* ULTRA-COMPACT NAME WRAPPING */
+      .ultra-abbr { 
+        font-size: 13px; 
+        font-weight: 800; 
+        max-width: 110px; 
+        white-space: normal; 
+        line-height: 1.1; 
+        word-break: normal; 
+      }
+      .ultra-team.right .ultra-abbr { text-align: right; }
+      
       .ultra-info { flex: 1.2; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
       .ultra-score, .ultra-main-text { font-size: 18px; font-weight: 900; }
       .live-text-large { font-size: 22px; font-weight: 900; color: #e74c3c; }

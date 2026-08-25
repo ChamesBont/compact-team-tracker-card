@@ -32,7 +32,7 @@ const LANG = {
     ultra_layout: "Ultra-Compact-Layout",
     slider_layout: "Als Karussell / Slider anzeigen",
     show_league: "Kopfzeile anzeigen",
-    logo_shadow: "Wappen mit leichtem Leuchten hervorheben",
+    logo_shadow: "Wappen hervorheben",
     show_location: "Spielort anzeigen",
     show_tv_network: "TV-Sender anzeigen",
     home_position_label: "Heimteam-Position",

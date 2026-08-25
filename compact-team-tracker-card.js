@@ -1143,10 +1143,7 @@ class CompactTeamTracker extends LitElement {
         right: -6px; 
         width: 18px; 
         height: 18px; 
-        border-radius: 50%; 
         object-fit: cover; 
-        border: 1.5px solid var(--card-background-color, #1c1c1e); 
-        box-shadow: 0 1px 4px rgba(0,0,0,0.4); 
         z-index: 2; 
       }
       

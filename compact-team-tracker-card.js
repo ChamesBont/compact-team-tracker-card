@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.0-beta1 !!!");
+console.log("!!! TEAM TRACKER v2.1.0-beta2 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -637,8 +637,17 @@ class CompactTeamTracker extends LitElement {
 
   _resolveAthleteData(a, isOpponent = false) {
     const prefix = isOpponent ? "opponent_" : "team_";
-    const headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
+    let headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
     const rawLogo = a[`${prefix}logo`] || null;
+    const id = a[`${prefix}id`] || a[`${prefix}athlete_id`] || a[`${prefix}player_id`] || null;
+    const sport = (a.sport || a.league || "mma").toLowerCase();
+
+    // Fallback: Wenn kein direktes Headshot-Attribut da ist, aber eine ID existiert (z.B. MMA/UFC, Tennis, Golf)
+    if (!headshot && id && (sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("racing") || sport.includes("f1"))) {
+      const sportKey = (sport.includes("mma") || sport.includes("ufc")) ? "mma" : (sport.includes("tennis") ? "tennis" : (sport.includes("golf") ? "golf" : "racing"));
+      headshot = `https://a.espncdn.com/i/headshots/${sportKey}/players/full/${id}.png`;
+    }
+
     const flag = a[`${prefix}flag`] || a[`${prefix}country_flag`] || (headshot && rawLogo ? rawLogo : null);
     const mainLogo = headshot || rawLogo;
     const name = this._cleanName(a[`${prefix}abbr`], a[`${prefix}name`]);

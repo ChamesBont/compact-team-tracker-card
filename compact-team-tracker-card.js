@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.0.9.4-beta1 - TV NETWORK SWITCH !!!");
+console.log("!!! TEAM TRACKER v2.0.9.4 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -1070,7 +1070,7 @@ class CompactTeamTracker extends LitElement {
         padding: 12px 16px; 
       }
 
-      .info-footer { padding: 6px 12px 0; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
+      .info-footer { padding: 4px 12px; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
       .venue { font-weight: bold; margin-bottom: 2px; }
       .tv-network { font-size: 9px; opacity: 0.85; display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 2px; }
       .tv-icon { --mdc-icon-size: 12px; }

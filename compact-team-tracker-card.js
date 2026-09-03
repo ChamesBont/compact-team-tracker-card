@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.1-beta1 !!!");
+console.log("!!! TEAM TRACKER v2.1.1-beta3 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -20,41 +20,6 @@ async function preloadHAComponents() {
   }
 }
 
-// --- SPORTARTEN HELPER FÜR WORDEINSTELLUNGEN ---
-function getMatchTerm(sport, league, lang = 'de') {
-  const s = (sport || league || "").toLowerCase();
-  
-  if (s.includes("mma") || s.includes("ufc") || s.includes("fight") || s.includes("boxing") || s.includes("boxen")) {
-    return {
-      hide_finished: lang === 'de' ? "Beendete Kämpfe ausblenden" : "Hide finished fights",
-      no_upcoming: lang === 'de' ? "Keine anstehenden Kämpfe" : "No upcoming fights",
-      finished: lang === 'de' ? "Beendet" : "Finished"
-    };
-  }
-  
-  if (s.includes("racing") || s.includes("f1") || s.includes("nascar") || s.includes("rally") || s.includes("motorsport")) {
-    return {
-      hide_finished: lang === 'de' ? "Beendete Rennen ausblenden" : "Hide finished races",
-      no_upcoming: lang === 'de' ? "Keine anstehenden Rennen" : "No upcoming races",
-      finished: lang === 'de' ? "Beendet" : "Finished"
-    };
-  }
-
-  if (s.includes("tennis") || s.includes("golf") || s.includes("pga")) {
-    return {
-      hide_finished: lang === 'de' ? "Beendete Matches ausblenden" : "Hide finished matches",
-      no_upcoming: lang === 'de' ? "Keine anstehenden Matches" : "No upcoming matches",
-      finished: lang === 'de' ? "Beendet" : "Finished"
-    };
-  }
-
-  return {
-    hide_finished: lang === 'de' ? "Beendete Spiele ausblenden" : "Hide finished matches",
-    no_upcoming: lang === 'de' ? "Keine anstehenden Spiele" : "No upcoming matches",
-    finished: lang === 'de' ? "Beendet" : "Finished"
-  };
-}
-
 // --- ÜBERSETZUNGEN ---
 const LANG = {
   de: {
@@ -67,6 +32,7 @@ const LANG = {
     ultra_layout: "Ultra-Compact-Layout",
     slider_layout: "Als Karussell / Slider anzeigen",
     show_league: "Kopfzeile anzeigen",
+    show_event_name: "Eventname / Kampfabend anzeigen",
     logo_shadow: "Wappen/Profilbild hervorheben",
     show_location: "Spielort anzeigen",
     show_tv_network: "TV-Sender anzeigen",
@@ -78,8 +44,7 @@ const LANG = {
     delimiter_dash: "Bindestrich ( - )",
     match_info_section: "Spiel-Informationen",
     next_only: "Nur das nächste/aktuelle Spiel anzeigen",
-    hide_finished: "Beendete Spiele ausblenden",
-    hide_finished_help: "Versteckt Partien vom Vortag automatisch um Mitternacht.",
+    hide_finished_help: "Versteckt Spiele vom Vortag automatisch um Mitternacht.",
     hide_offseason: "Spielfreie Teams ausblenden",
     hide_offseason_help: "Versteckt Teams ohne aktuell angesetzte Partien (z. B. Sommerpause/Pokal).",
     show_sun: "Statistiken (S-U-N) anzeigen",
@@ -93,7 +58,6 @@ const LANG = {
     scheduled: "Geplant",
     finished: "Beendet",
     live: "LIVE",
-    no_upcoming_games: "Keine anstehenden Spiele",
     bye_week: "Spielfrei",
     pos: "Pos."
   },
@@ -107,6 +71,7 @@ const LANG = {
     ultra_layout: "Ultra-compact layout",
     slider_layout: "Display as carousel / slider",
     show_league: "Show card header",
+    show_event_name: "Show event / fight card name",
     logo_shadow: "Highlight logo/profile picture",
     show_location: "Show match location",
     show_tv_network: "Show TV broadcast",
@@ -118,7 +83,6 @@ const LANG = {
     delimiter_dash: "Dash ( - )",
     match_info_section: "Match Information",
     next_only: "Show only next/current match",
-    hide_finished: "Hide finished matches",
     hide_finished_help: "Automatically hides matches from previous days at midnight.",
     hide_offseason: "Hide unscheduled teams",
     hide_offseason_help: "Hides teams without currently scheduled matches.",
@@ -133,7 +97,6 @@ const LANG = {
     scheduled: "Scheduled",
     finished: "Finished",
     live: "LIVE",
-    no_upcoming_games: "No upcoming matches",
     bye_week: "Bye Week",
     pos: "Pos."
   }
@@ -174,6 +137,40 @@ class CompactTeamTrackerEditor extends LitElement {
     return attr.toLowerCase().includes("espn") || stateObj.entity_id.includes("team_tracker");
   }
 
+  _getMatchTerm(stateObj) {
+    const isDe = (this.hass?.language || 'de') === 'de';
+    if (!stateObj || !stateObj.attributes) {
+      return {
+        hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
+        noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
+      };
+    }
+    const sport = (stateObj.attributes.sport || stateObj.attributes.league || "").toLowerCase();
+
+    if (sport.includes("mma") || sport.includes("ufc") || sport.includes("box") || sport.includes("kickbox")) {
+      return {
+        hideFinished: isDe ? "Beendete Kämpfe ausblenden" : "Hide finished fights",
+        noUpcoming: isDe ? "Keine anstehenden Kämpfe" : "No upcoming fights"
+      };
+    }
+    if (sport.includes("racing") || sport.includes("f1") || sport.includes("nascar") || sport.includes("rally")) {
+      return {
+        hideFinished: isDe ? "Beendete Rennen ausblenden" : "Hide finished races",
+        noUpcoming: isDe ? "Keine anstehenden Rennen" : "No upcoming races"
+      };
+    }
+    if (sport.includes("tennis") || sport.includes("golf")) {
+      return {
+        hideFinished: isDe ? "Beendete Matches ausblenden" : "Hide finished matches",
+        noUpcoming: isDe ? "Keine anstehenden Matches" : "No upcoming matches"
+      };
+    }
+    return {
+      hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
+      noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
+    };
+  }
+
   render() {
     if (!this.hass || !this._config) return html``;
     const t = this._lang;
@@ -193,6 +190,10 @@ class CompactTeamTrackerEditor extends LitElement {
     const colors = this._config.team_colors || {};
     const homePos = this._config.home_team_position || 'left';
     const delimiter = this._config.score_delimiter || ':';
+
+    const firstEntityId = this._config.entities?.[0];
+    const firstStateObj = firstEntityId ? this.hass.states[firstEntityId] : null;
+    const terms = this._getMatchTerm(firstStateObj);
 
     return html`
       <div class="card-config">
@@ -293,6 +294,15 @@ class CompactTeamTrackerEditor extends LitElement {
             </ha-switch>
             <span>${t.show_league}</span>
           </div>
+          <div class="switch-row ${isUltra ? 'disabled' : ''}">
+            <ha-switch 
+              .checked="${this._config.show_event_name !== false}" 
+              .disabled="${isUltra}"
+              .configValue="${"show_event_name"}" 
+              @change="${this._toggleOption}">
+            </ha-switch>
+            <span>${t.show_event_name}</span>
+          </div>
           <div class="switch-row">
             <ha-switch 
               .checked="${this._config.logo_shadow === true}" 
@@ -355,7 +365,7 @@ class CompactTeamTrackerEditor extends LitElement {
               .configValue="${"only_today"}" 
               @change="${this._toggleOption}">
             </ha-switch>
-            <span>${t.hide_finished}</span>
+            <span>${terms.hideFinished}</span>
           </div>
           <p class="help-text">${t.hide_finished_help}</p>
 
@@ -591,11 +601,45 @@ class CompactTeamTracker extends LitElement {
   }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
     return LANG[l] || LANG['en'];
+  }
+
+  _getMatchTerm(stateObj) {
+    const isDe = (this.hass?.language || 'de') === 'de';
+    if (!stateObj || !stateObj.attributes) {
+      return {
+        hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
+        noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
+      };
+    }
+    const sport = (stateObj.attributes.sport || stateObj.attributes.league || "").toLowerCase();
+
+    if (sport.includes("mma") || sport.includes("ufc") || sport.includes("box") || sport.includes("kickbox")) {
+      return {
+        hideFinished: isDe ? "Beendete Kämpfe ausblenden" : "Hide finished fights",
+        noUpcoming: isDe ? "Keine anstehenden Kämpfe" : "No upcoming fights"
+      };
+    }
+    if (sport.includes("racing") || sport.includes("f1") || sport.includes("nascar") || sport.includes("rally")) {
+      return {
+        hideFinished: isDe ? "Beendete Rennen ausblenden" : "Hide finished races",
+        noUpcoming: isDe ? "Keine anstehenden Rennen" : "No upcoming races"
+      };
+    }
+    if (sport.includes("tennis") || sport.includes("golf")) {
+      return {
+        hideFinished: isDe ? "Beendete Matches ausblenden" : "Hide finished matches",
+        noUpcoming: isDe ? "Keine anstehenden Matches" : "No upcoming matches"
+      };
+    }
+    return {
+      hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
+      noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
+    };
   }
 
   _prevSlide(max) {
@@ -913,13 +957,13 @@ class CompactTeamTracker extends LitElement {
   renderNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
+    const terms = this._getMatchTerm(entityObj);
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const showLeague = this.config.show_league !== false;
     const logoUrl = this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_name, a.team_abbr);
-    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
 
     return html`
       <div class="card-wrapper off-season-card" style="${customStyle}">
@@ -942,7 +986,7 @@ class CompactTeamTracker extends LitElement {
           </div>
           <div class="no-match-message">
             <div class="no-match-team-name">${teamName}</div>
-            <div class="no-match-title">${s === 'BYE' ? t.bye_week : terms.no_upcoming}</div>
+            <div class="no-match-title">${s === 'BYE' ? t.bye_week : terms.noUpcoming}</div>
           </div>
         </div>
       </div>
@@ -953,12 +997,12 @@ class CompactTeamTracker extends LitElement {
   renderUltraNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
+    const terms = this._getMatchTerm(entityObj);
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const logoUrl = this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_abbr, a.team_name);
-    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
 
     return html`
       <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
@@ -968,7 +1012,7 @@ class CompactTeamTracker extends LitElement {
         </div>
         <div class="ultra-info">
           <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
-            ${s === 'BYE' ? t.bye_week : terms.no_upcoming}
+            ${s === 'BYE' ? t.bye_week : terms.noUpcoming}
           </span>
         </div>
         <div class="ultra-team right">
@@ -1005,13 +1049,13 @@ class CompactTeamTracker extends LitElement {
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
     const delim = this.config.score_delimiter || ':';
-    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
     
     const kDate = a.date ? new Date(a.date) : null;
     const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
     const fullDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
     const showLeague = this.config.show_league !== false;
+    const showEventName = this.config.show_event_name !== false;
     const showLastPlay = this.config.show_last_play !== false;
     const showLocation = this.config.show_location !== false;
     const showTv = this.config.show_tv_network !== false;
@@ -1021,14 +1065,7 @@ class CompactTeamTracker extends LitElement {
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
-    // Echte Event-Namen ermitteln (F1/UFC/Golf) und Team-vs-Team Strings filtern
-    const rawEvent = a.event_name || a.event || "";
-    const isTeamVsTeamString = rawEvent.includes(" at ") || rawEvent.includes(" vs ") || rawEvent.includes(" vs. ");
-    const displayEventName = (!isTeamVsTeamString && rawEvent && rawEvent !== (a.league_name || a.league)) 
-      ? rawEvent 
-      : (sides.isRacing && a.venue ? a.venue : null);
-
-    const hasLocation = showLocation && (a.venue || a.location) && !sides.isRacing;
+    const hasLocation = showLocation && (a.venue || a.location);
     const hasTv = showTv && (a.tv_network || a.broadcast);
     const hasLastPlay = showLastPlay && s === 'IN' && a.last_play;
     const hasFooterContent = hasLocation || hasTv || hasLastPlay;
@@ -1041,16 +1078,16 @@ class CompactTeamTracker extends LitElement {
               ${showLeague ? html`
                 <div class="league-box">${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}<span>${a.league_name || a.league || ''}</span></div>
               ` : ''}
-              ${s === 'IN' ? html`<div class="live-status"><span class="dot"></span> ${t.live} / ${a.clock || 'LIVE'}</div>` : (s === 'POST' ? html`<div class="status-post">${terms.finished}</div>` : '')}
+              ${s === 'IN' ? html`<div class="live-status"><span class="dot"></span> ${t.live} / ${a.clock || 'LIVE'}</div>` : (s === 'POST' ? html`<div class="status-post">${t.finished}</div>` : '')}
             </div>
           </div>
         ` : ''}
 
-        ${displayEventName ? html`
-          <div class="event-name-banner">${displayEventName}</div>
+        ${showEventName && sides.isIndividual && a.event_name && a.event_name !== (a.league_name || a.league) ? html`
+          <div class="event-name-banner">${a.event_name}</div>
         ` : ''}
         
-        <div class="content ${!showLeague && s !== 'IN' && !displayEventName ? 'extra-padding' : ''}">
+        <div class="content ${!showLeague && s !== 'IN' && (!showEventName || !sides.isIndividual || !a.event_name) ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
               ${this._renderLogoBox(sides.team, shadowClass, false)}
@@ -1108,7 +1145,6 @@ class CompactTeamTracker extends LitElement {
     const sides = this._getMatchSides(a);
     const delim = this.config.score_delimiter || ':';
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
-    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
 
     const kDate = a.date ? new Date(a.date) : null;
     const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -1116,13 +1152,6 @@ class CompactTeamTracker extends LitElement {
 
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
-
-    // Echte Event-Namen ermitteln
-    const rawEvent = a.event_name || a.event || "";
-    const isTeamVsTeamString = rawEvent.includes(" at ") || rawEvent.includes(" vs ") || rawEvent.includes(" vs. ");
-    const displayEventName = (!isTeamVsTeamString && rawEvent && rawEvent !== (a.league_name || a.league)) 
-      ? rawEvent 
-      : (sides.isRacing && a.venue ? a.venue : null);
 
     return html`
       <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
@@ -1132,10 +1161,9 @@ class CompactTeamTracker extends LitElement {
             <span class="ultra-abbr">${sides.team.name}</span>
           </div>
           <div class="ultra-info">
-            ${displayEventName ? html`<span class="ultra-event-name">${displayEventName}</span>` : ''}
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
-              : html`<span class="ultra-score live-text-large">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : terms.finished}</span></div>`
+              : html`<span class="ultra-score live-text-large">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
             }
           </div>
           <div class="ultra-team right">${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}</div>
@@ -1145,10 +1173,9 @@ class CompactTeamTracker extends LitElement {
             <span class="ultra-abbr">${sides.left.name}</span>
           </div>
           <div class="ultra-info">
-            ${displayEventName ? html`<span class="ultra-event-name">${displayEventName}</span>` : ''}
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
-              : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : terms.finished}</span></div>`
+              : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
             }
           </div>
           <div class="ultra-team right">
@@ -1159,7 +1186,7 @@ class CompactTeamTracker extends LitElement {
       </div>
     `;
   }
-  
+
   static get styles() {
     return css`
       ha-card { overflow: hidden; position: relative; }
@@ -1174,7 +1201,7 @@ class CompactTeamTracker extends LitElement {
       .status-post { opacity: 0.7; }
       .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
       
-      /* EVENT NAME BANNER FÜR SPORTARTEN */
+      /* EVENT NAME BANNER FÜR EINZELSPORTARTEN */
       .event-name-banner {
         text-align: center;
         font-size: 11px;
@@ -1184,17 +1211,6 @@ class CompactTeamTracker extends LitElement {
         opacity: 0.9;
         padding: 6px 12px 0;
         line-height: 1.2;
-      }
-
-      .ultra-event-name {
-        font-size: 9px;
-        font-weight: 700;
-        opacity: 0.8;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 110px;
-        margin: 0 auto 2px;
       }
 
       .content { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; width: 100%; box-sizing: border-box; }
@@ -1258,8 +1274,9 @@ class CompactTeamTracker extends LitElement {
         z-index: 2; 
       }
 
-      .custom-logo-shadow { filter: drop-shadow(0 0 3px #d3d3d3) !important; }
+      .custom-logo-shadow { filter: drop-shadow(0 0 6px #d3d3d3) !important; }
       
+      /* VOLLSTÄNDIGER NAME OHNE ABSCHNEIDEN MIT SCHÖNEM UMBRUCH */
       .name { 
         font-size: 13px; 
         font-weight: 800; 
@@ -1346,6 +1363,7 @@ class CompactTeamTracker extends LitElement {
       .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
       .ultra-team.right { justify-content: flex-end; }
       
+      /* ULTRA-COMPACT NAME WRAPPING */
       .ultra-abbr { 
         font-size: 13px; 
         font-weight: 800; 

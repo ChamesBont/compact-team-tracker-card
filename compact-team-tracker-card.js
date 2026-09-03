@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.0 !!!");
+console.log("!!! TEAM TRACKER v2.1.1-beta1 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -18,6 +18,41 @@ async function preloadHAComponents() {
       console.warn("Team Tracker: Lazy-Loading der HA-Komponenten fehlgeschlagen", e);
     }
   }
+}
+
+// --- SPORTARTEN HELPER FÜR WORDEINSTELLUNGEN ---
+function getMatchTerm(sport, league, lang = 'de') {
+  const s = (sport || league || "").toLowerCase();
+  
+  if (s.includes("mma") || s.includes("ufc") || s.includes("fight") || s.includes("boxing") || s.includes("boxen")) {
+    return {
+      hide_finished: lang === 'de' ? "Beendete Kämpfe ausblenden" : "Hide finished fights",
+      no_upcoming: lang === 'de' ? "Keine anstehenden Kämpfe" : "No upcoming fights",
+      finished: lang === 'de' ? "Beendet" : "Finished"
+    };
+  }
+  
+  if (s.includes("racing") || s.includes("f1") || s.includes("nascar") || s.includes("rally") || s.includes("motorsport")) {
+    return {
+      hide_finished: lang === 'de' ? "Beendete Rennen ausblenden" : "Hide finished races",
+      no_upcoming: lang === 'de' ? "Keine anstehenden Rennen" : "No upcoming races",
+      finished: lang === 'de' ? "Beendet" : "Finished"
+    };
+  }
+
+  if (s.includes("tennis") || s.includes("golf") || s.includes("pga")) {
+    return {
+      hide_finished: lang === 'de' ? "Beendete Matches ausblenden" : "Hide finished matches",
+      no_upcoming: lang === 'de' ? "Keine anstehenden Matches" : "No upcoming matches",
+      finished: lang === 'de' ? "Beendet" : "Finished"
+    };
+  }
+
+  return {
+    hide_finished: lang === 'de' ? "Beendete Spiele ausblenden" : "Hide finished matches",
+    no_upcoming: lang === 'de' ? "Keine anstehenden Spiele" : "No upcoming matches",
+    finished: lang === 'de' ? "Beendet" : "Finished"
+  };
 }
 
 // --- ÜBERSETZUNGEN ---
@@ -44,7 +79,7 @@ const LANG = {
     match_info_section: "Spiel-Informationen",
     next_only: "Nur das nächste/aktuelle Spiel anzeigen",
     hide_finished: "Beendete Spiele ausblenden",
-    hide_finished_help: "Versteckt Spiele vom Vortag automatisch um Mitternacht.",
+    hide_finished_help: "Versteckt Partien vom Vortag automatisch um Mitternacht.",
     hide_offseason: "Spielfreie Teams ausblenden",
     hide_offseason_help: "Versteckt Teams ohne aktuell angesetzte Partien (z. B. Sommerpause/Pokal).",
     show_sun: "Statistiken (S-U-N) anzeigen",
@@ -884,6 +919,7 @@ class CompactTeamTracker extends LitElement {
     const logoUrl = this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_name, a.team_abbr);
+    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
 
     return html`
       <div class="card-wrapper off-season-card" style="${customStyle}">
@@ -906,7 +942,7 @@ class CompactTeamTracker extends LitElement {
           </div>
           <div class="no-match-message">
             <div class="no-match-team-name">${teamName}</div>
-            <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
+            <div class="no-match-title">${s === 'BYE' ? t.bye_week : terms.no_upcoming}</div>
           </div>
         </div>
       </div>
@@ -922,6 +958,7 @@ class CompactTeamTracker extends LitElement {
     const logoUrl = this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_abbr, a.team_name);
+    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
 
     return html`
       <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
@@ -931,7 +968,7 @@ class CompactTeamTracker extends LitElement {
         </div>
         <div class="ultra-info">
           <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
-            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
+            ${s === 'BYE' ? t.bye_week : terms.no_upcoming}
           </span>
         </div>
         <div class="ultra-team right">
@@ -968,6 +1005,7 @@ class CompactTeamTracker extends LitElement {
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
     const delim = this.config.score_delimiter || ':';
+    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
     
     const kDate = a.date ? new Date(a.date) : null;
     const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -996,16 +1034,16 @@ class CompactTeamTracker extends LitElement {
               ${showLeague ? html`
                 <div class="league-box">${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}<span>${a.league_name || a.league || ''}</span></div>
               ` : ''}
-              ${s === 'IN' ? html`<div class="live-status"><span class="dot"></span> ${t.live} / ${a.clock || 'LIVE'}</div>` : (s === 'POST' ? html`<div class="status-post">${t.finished}</div>` : '')}
+              ${s === 'IN' ? html`<div class="live-status"><span class="dot"></span> ${t.live} / ${a.clock || 'LIVE'}</div>` : (s === 'POST' ? html`<div class="status-post">${terms.finished}</div>` : '')}
             </div>
           </div>
         ` : ''}
 
-        ${sides.isIndividual && a.event_name && a.event_name !== (a.league_name || a.league) ? html`
+        ${a.event_name && a.event_name !== (a.league_name || a.league) ? html`
           <div class="event-name-banner">${a.event_name}</div>
         ` : ''}
         
-        <div class="content ${!showLeague && s !== 'IN' && (!sides.isIndividual || !a.event_name) ? 'extra-padding' : ''}">
+        <div class="content ${!showLeague && s !== 'IN' && !a.event_name ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
               ${this._renderLogoBox(sides.team, shadowClass, false)}
@@ -1063,6 +1101,7 @@ class CompactTeamTracker extends LitElement {
     const sides = this._getMatchSides(a);
     const delim = this.config.score_delimiter || ':';
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
+    const terms = getMatchTerm(a.sport, a.league_name || a.league, this.hass?.language || 'de');
 
     const kDate = a.date ? new Date(a.date) : null;
     const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -1079,9 +1118,10 @@ class CompactTeamTracker extends LitElement {
             <span class="ultra-abbr">${sides.team.name}</span>
           </div>
           <div class="ultra-info">
+            ${a.event_name && a.event_name !== (a.league_name || a.league) ? html`<span class="ultra-event-name">${a.event_name}</span>` : ''}
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
-              : html`<span class="ultra-score live-text-large">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
+              : html`<span class="ultra-score live-text-large">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : terms.finished}</span></div>`
             }
           </div>
           <div class="ultra-team right">${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}</div>
@@ -1091,9 +1131,10 @@ class CompactTeamTracker extends LitElement {
             <span class="ultra-abbr">${sides.left.name}</span>
           </div>
           <div class="ultra-info">
+            ${a.event_name && a.event_name !== (a.league_name || a.league) ? html`<span class="ultra-event-name">${a.event_name}</span>` : ''}
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
-              : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
+              : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : terms.finished}</span></div>`
             }
           </div>
           <div class="ultra-team right">
@@ -1119,7 +1160,7 @@ class CompactTeamTracker extends LitElement {
       .status-post { opacity: 0.7; }
       .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
       
-      /* EVENT NAME BANNER FÜR EINZELSPORTARTEN */
+      /* EVENT NAME BANNER FÜR SPORTARTEN */
       .event-name-banner {
         text-align: center;
         font-size: 11px;
@@ -1129,6 +1170,17 @@ class CompactTeamTracker extends LitElement {
         opacity: 0.9;
         padding: 6px 12px 0;
         line-height: 1.2;
+      }
+
+      .ultra-event-name {
+        font-size: 9px;
+        font-weight: 700;
+        opacity: 0.8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 110px;
+        margin: 0 auto 2px;
       }
 
       .content { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; width: 100%; box-sizing: border-box; }
@@ -1192,9 +1244,8 @@ class CompactTeamTracker extends LitElement {
         z-index: 2; 
       }
 
-      .custom-logo-shadow { filter: drop-shadow(0 0 6px #d3d3d3) !important; }
+      .custom-logo-shadow { filter: drop-shadow(0 0 3px #d3d3d3) !important; }
       
-      /* VOLLSTÄNDIGER NAME OHNE ABSCHNEIDEN MIT SCHÖNEM UMBRUCH */
       .name { 
         font-size: 13px; 
         font-weight: 800; 
@@ -1281,7 +1332,6 @@ class CompactTeamTracker extends LitElement {
       .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
       .ultra-team.right { justify-content: flex-end; }
       
-      /* ULTRA-COMPACT NAME WRAPPING */
       .ultra-abbr { 
         font-size: 13px; 
         font-weight: 800; 

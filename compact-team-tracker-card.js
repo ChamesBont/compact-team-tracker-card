@@ -164,7 +164,7 @@ class CompactTeamTrackerEditor extends LitElement {
           ${this._config.entities.map((ent, idx) => html`
             <div class="team-item-card" key="${ent || idx}">
               <div class="team-item-header">
-                <span class="team-number-label">Team / Sensor ${idx + 1}</span>
+                <span class="team-number-label">Sensor ${idx + 1}</span>
                 <ha-icon 
                   icon="mdi:trash-can-outline" 
                   class="delete-icon" 

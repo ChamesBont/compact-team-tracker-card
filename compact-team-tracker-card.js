@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.1-beta1 !!!");
+console.log("!!! TEAM TRACKER v2.1.2 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -44,6 +44,7 @@ const LANG = {
     delimiter_dash: "Bindestrich ( - )",
     match_info_section: "Event-Informationen",
     next_only: "Nur das nächste/aktuelle Event anzeigen",
+    hide_finished: "Beendete Events ausblenden",
     hide_finished_help: "Versteckt Event vom Vortag automatisch um Mitternacht.",
     hide_offseason: "Ungeplante Veranstaltungen ausblenden",
     hide_offseason_help: "Versteckt aktuell nicht angesetzte Events.",
@@ -83,6 +84,7 @@ const LANG = {
     delimiter_dash: "Dash ( - )",
     match_info_section: "Event Information",
     next_only: "Show only next/current event",
+    hide_finished: "Hide finished events",
     hide_finished_help: "Automatically hides events from previous days at midnight.",
     hide_offseason: "Hide unscheduled events",
     hide_offseason_help: "Hides currently unscheduled events.",
@@ -143,9 +145,9 @@ class CompactTeamTrackerEditor extends LitElement {
 
     if (!this._pickerReady && !customElements.get("ha-entity-picker")) {
       return html`
-        <div style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
-          Registriere Editor-Komponenten im Dashboard...
-        </div>
+      <div style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
+      Registriere Editor-Komponenten im Dashboard...
+      </div>
       `;
     }
 
@@ -158,226 +160,226 @@ class CompactTeamTrackerEditor extends LitElement {
     const delimiter = this._config.score_delimiter || ':';
 
     return html`
-      <div class="card-config">
-        <div class="section-title">${t.manage_teams}</div>
-        <div class="config-box">
-          ${this._config.entities.map((ent, idx) => html`
-            <div class="team-item-card" key="${ent || idx}">
-              <div class="team-item-header">
-                <span class="team-number-label">Sensor ${idx + 1}</span>
-                <ha-icon 
-                  icon="mdi:trash-can-outline" 
-                  class="delete-icon" 
-                  title="Entfernen"
-                  @click="${() => this._removeEntity(idx)}">
-                </ha-icon>
-              </div>
-              
-              <ha-entity-picker 
-                .hass="${this.hass}" 
-                .value="${ent}" 
-                .includeDomains="${["sensor"]}" 
-                .entityFilter="${(s) => this._filterEntity(s)}"
-                @value-changed="${(ev) => this._entityChanged(idx, ev)}" 
-                allow-custom-entity>
-              </ha-entity-picker>
+    <div class="card-config">
+    <div class="section-title">${t.manage_teams}</div>
+    <div class="config-box">
+    ${this._config.entities.map((ent, idx) => html`
+      <div class="team-item-card" key="${ent || idx}">
+      <div class="team-item-header">
+      <span class="team-number-label">Team / Sensor ${idx + 1}</span>
+      <ha-icon
+      icon="mdi:trash-can-outline"
+      class="delete-icon"
+      title="Entfernen"
+      @click="${() => this._removeEntity(idx)}">
+      </ha-icon>
+      </div>
 
-              <div class="team-color-subrow">
-                <span class="color-label">${t.bg_color}</span>
-                <div class="color-controls">
-                  <input 
-                    type="color" 
-                    class="color-circle" 
-                    .value="${colors[ent] || '#1c1c1e'}" 
-                    @input="${(ev) => this._colorChanged(ent, ev.target.value)}">
-                  <input 
-                    type="text" 
-                    class="color-text-input" 
-                    placeholder="#HEX" 
-                    .value="${colors[ent] || ''}" 
-                    @change="${(ev) => this._colorChanged(ent, ev.target.value)}">
-                  ${colors[ent] ? html`
-                    <button class="reset-color-btn" @click="${() => this._resetColor(ent)}">
-                      ${t.reset}
-                    </button>
-                  ` : ''}
-                </div>
-              </div>
-            </div>
-          `)}
-          
-          <ha-entity-picker 
-            .label="${t.add_team}" 
-            .hass="${this.hass}" 
-            .includeDomains="${["sensor"]}" 
-            .entityFilter="${(s) => this._filterEntity(s)}"
-            @value-changed="${this._addEntity}">
-          </ha-entity-picker>
+      <ha-entity-picker
+      .hass="${this.hass}"
+      .value="${ent}"
+      .includeDomains="${["sensor"]}"
+      .entityFilter="${(s) => this._filterEntity(s)}"
+      @value-changed="${(ev) => this._entityChanged(idx, ev)}"
+      allow-custom-entity>
+      </ha-entity-picker>
+
+      <div class="team-color-subrow">
+      <span class="color-label">${t.bg_color}</span>
+      <div class="color-controls">
+      <input
+      type="color"
+      class="color-circle"
+      .value="${colors[ent] || '#1c1c1e'}"
+      @input="${(ev) => this._colorChanged(ent, ev.target.value)}">
+      <input
+      type="text"
+      class="color-text-input"
+      placeholder="#HEX"
+      .value="${colors[ent] || ''}"
+      @change="${(ev) => this._colorChanged(ent, ev.target.value)}">
+      ${colors[ent] ? html`
+        <button class="reset-color-btn" @click="${() => this._resetColor(ent)}">
+        ${t.reset}
+        </button>
+        ` : ''}
+        </div>
+        </div>
+        </div>
+        `)}
+
+        <ha-entity-picker
+        .label="${t.add_team}"
+        .hass="${this.hass}"
+        .includeDomains="${["sensor"]}"
+        .entityFilter="${(s) => this._filterEntity(s)}"
+        @value-changed="${this._addEntity}">
+        </ha-entity-picker>
         </div>
 
         <div class="section-title">${t.priority_label}</div>
         <div class="config-box">
-          <ha-entity-picker 
-            .label="${t.prio_picker}" 
-            .hass="${this.hass}" 
-            .value="${this._config.priority_entity || ''}" 
-            .includeDomains="${["sensor"]}" 
-            .entityFilter="${(s) => this._filterEntity(s)}"
-            @value-changed="${this._prioChanged}" 
-            allow-custom-entity>
-          </ha-entity-picker>
-          <p class="help-text">${t.prio_help}</p>
+        <ha-entity-picker
+        .label="${t.prio_picker}"
+        .hass="${this.hass}"
+        .value="${this._config.priority_entity || ''}"
+        .includeDomains="${["sensor"]}"
+        .entityFilter="${(s) => this._filterEntity(s)}"
+        @value-changed="${this._prioChanged}"
+        allow-custom-entity>
+        </ha-entity-picker>
+        <p class="help-text">${t.prio_help}</p>
         </div>
 
         <div class="section-title">${t.layout_section}</div>
         <div class="config-box">
-          <div class="switch-row">
-            <ha-switch 
-              .checked="${isUltra}" 
-              .configValue="${"layout"}" 
-              @change="${this._toggleLayout}">
-            </ha-switch>
-            <span>${t.ultra_layout}</span>
-          </div>
-          <div class="switch-row">
-            <ha-switch 
-              .checked="${isSlider}" 
-              .configValue="${"slider"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.slider_layout}</span>
-          </div>
-          <div class="switch-row ${isUltra ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.show_league !== false}" 
-              .disabled="${isUltra}"
-              .configValue="${"show_league"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.show_league}</span>
-          </div>
-          <div class="switch-row">
-            <ha-switch 
-              .checked="${this._config.logo_shadow === true}" 
-              .configValue="${"logo_shadow"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.logo_shadow}</span>
-          </div>
-          <div class="switch-row ${isUltra ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.show_location !== false}" 
-              .disabled="${isUltra}"
-              .configValue="${"show_location"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.show_location}</span>
-          </div>
-          <div class="switch-row ${isUltra ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.show_tv_network !== false}" 
-              .disabled="${isUltra}"
-              .configValue="${"show_tv_network"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.show_tv_network}</span>
-          </div>
+        <div class="switch-row">
+        <ha-switch
+        .checked="${isUltra}"
+        .configValue="${"layout"}"
+        @change="${this._toggleLayout}">
+        </ha-switch>
+        <span>${t.ultra_layout}</span>
+        </div>
+        <div class="switch-row">
+        <ha-switch
+        .checked="${isSlider}"
+        .configValue="${"slider"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.slider_layout}</span>
+        </div>
+        <div class="switch-row ${isUltra ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.show_league !== false}"
+        .disabled="${isUltra}"
+        .configValue="${"show_league"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.show_league}</span>
+        </div>
+        <div class="switch-row">
+        <ha-switch
+        .checked="${this._config.logo_shadow === true}"
+        .configValue="${"logo_shadow"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.logo_shadow}</span>
+        </div>
+        <div class="switch-row ${isUltra ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.show_location !== false}"
+        .disabled="${isUltra}"
+        .configValue="${"show_location"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.show_location}</span>
+        </div>
+        <div class="switch-row ${isUltra ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.show_tv_network !== false}"
+        .disabled="${isUltra}"
+        .configValue="${"show_tv_network"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.show_tv_network}</span>
+        </div>
 
-          <div class="select-row">
-            <label class="select-label">${t.home_position_label}</label>
-            <select class="custom-select" .value="${homePos}" @change="${(e) => this._selectOption('home_team_position', e.target.value)}">
-              <option value="left" ?selected="${homePos === 'left'}">${t.home_left}</option>
-              <option value="right" ?selected="${homePos === 'right'}">${t.home_right}</option>
-            </select>
-          </div>
+        <div class="select-row">
+        <label class="select-label">${t.home_position_label}</label>
+        <select class="custom-select" .value="${homePos}" @change="${(e) => this._selectOption('home_team_position', e.target.value)}">
+        <option value="left" ?selected="${homePos === 'left'}">${t.home_left}</option>
+        <option value="right" ?selected="${homePos === 'right'}">${t.home_right}</option>
+        </select>
+        </div>
 
-          <div class="select-row">
-            <label class="select-label">${t.delimiter_label}</label>
-            <select class="custom-select" .value="${delimiter}" @change="${(e) => this._selectOption('score_delimiter', e.target.value)}">
-              <option value=":" ?selected="${delimiter === ':'}">${t.delimiter_colon}</option>
-              <option value="-" ?selected="${delimiter === '-'}">${t.delimiter_dash}</option>
-            </select>
-          </div>
+        <div class="select-row">
+        <label class="select-label">${t.delimiter_label}</label>
+        <select class="custom-select" .value="${delimiter}" @change="${(e) => this._selectOption('score_delimiter', e.target.value)}">
+        <option value=":" ?selected="${delimiter === ':'}">${t.delimiter_colon}</option>
+        <option value="-" ?selected="${delimiter === '-'}">${t.delimiter_dash}</option>
+        </select>
+        </div>
         </div>
 
         <div class="section-title">${t.match_info_section}</div>
         <div class="config-box">
-          <div class="switch-row ${isSlider ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.show_next_only === true}" 
-              .disabled="${isSlider}"
-              .configValue="${"show_next_only"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.next_only}</span>
-          </div>
-          
-          <div class="switch-row">
-            <ha-switch 
-              .checked="${this._config.only_today === true}" 
-              .configValue="${"only_today"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.hide_finished}</span>
-          </div>
-          <p class="help-text">${t.hide_finished_help}</p>
+        <div class="switch-row ${isSlider ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.show_next_only === true}"
+        .disabled="${isSlider}"
+        .configValue="${"show_next_only"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.next_only}</span>
+        </div>
 
-          <div class="switch-row">
-            <ha-switch 
-              .checked="${this._config.hide_offseason === true}" 
-              .configValue="${"hide_offseason"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.hide_offseason}</span>
-          </div>
-          <p class="help-text">${t.hide_offseason_help}</p>
+        <div class="switch-row">
+        <ha-switch
+        .checked="${this._config.only_today === true}"
+        .configValue="${"only_today"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.hide_finished}</span>
+        </div>
+        <p class="help-text">${t.hide_finished_help}</p>
 
-          <div class="switch-row ${isUltra ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.show_record === true}" 
-              .disabled="${isUltra}"
-              .configValue="${"show_record"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.show_sun}</span>
-          </div>
+        <div class="switch-row">
+        <ha-switch
+        .checked="${this._config.hide_offseason === true}"
+        .configValue="${"hide_offseason"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.hide_offseason}</span>
+        </div>
+        <p class="help-text">${t.hide_offseason_help}</p>
+
+        <div class="switch-row ${isUltra ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.show_record === true}"
+        .disabled="${isUltra}"
+        .configValue="${"show_record"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.show_sun}</span>
+        </div>
         </div>
 
         <div class="section-title">${t.live_details_section}</div>
         <div class="config-box">
-          <div class="switch-row ${isShowLastPlayDisabled ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.show_last_play !== false}" 
-              .disabled="${isShowLastPlayDisabled}"
-              .configValue="${"show_last_play"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.show_last_play}</span>
-          </div>
-          <p class="help-text ${isShowLastPlayDisabled ? 'disabled' : ''}">${t.last_play_help}</p>
-          <div class="switch-row ${isMarqueeDisabled ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.last_play_marquee === true}" 
-              .disabled="${isMarqueeDisabled}"
-              .configValue="${"last_play_marquee"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.last_play_marquee}</span>
-          </div>
+        <div class="switch-row ${isShowLastPlayDisabled ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.show_last_play !== false}"
+        .disabled="${isShowLastPlayDisabled}"
+        .configValue="${"show_last_play"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.show_last_play}</span>
         </div>
-      </div>
-    `;
+        <p class="help-text ${isShowLastPlayDisabled ? 'disabled' : ''}">${t.last_play_help}</p>
+        <div class="switch-row ${isMarqueeDisabled ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.last_play_marquee === true}"
+        .disabled="${isMarqueeDisabled}"
+        .configValue="${"last_play_marquee"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.last_play_marquee}</span>
+        </div>
+        </div>
+        </div>
+        `;
   }
 
   _toggleLayout(ev) { this._updateConfig({ ...this._config, layout: ev.target.checked ? 'ultra' : 'standard' }); }
   _toggleOption(ev) { this._updateConfig({ ...this._config, [ev.target.configValue]: ev.target.checked }); }
   _selectOption(key, val) { this._updateConfig({ ...this._config, [key]: val }); }
-  
+
   _entityChanged(idx, ev) {
     const oldEnt = this._config.entities[idx];
     const newEntities = [...this._config.entities];
     newEntities[idx] = ev.detail.value;
-    
+
     const teamColors = { ...(this._config.team_colors || {}) };
     if (oldEnt && teamColors[oldEnt] && oldEnt !== ev.detail.value) {
       teamColors[ev.detail.value] = teamColors[oldEnt];
@@ -413,133 +415,133 @@ class CompactTeamTrackerEditor extends LitElement {
     ev.target.value = "";
   }
 
-  _removeEntity(idx) { 
+  _removeEntity(idx) {
     const entToRemove = this._config.entities[idx];
     const newEntities = this._config.entities.filter((_, i) => i !== idx);
     const teamColors = { ...(this._config.team_colors || {}) };
     if (entToRemove) delete teamColors[entToRemove];
-    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors }); 
+    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors });
   }
 
   _prioChanged(ev) { this._updateConfig({ ...this._config, priority_entity: ev.detail.value }); }
-  
-  _updateConfig(newConfig) { 
+
+  _updateConfig(newConfig) {
     this._config = JSON.parse(JSON.stringify(newConfig));
-    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true })); 
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
     this.requestUpdate();
   }
-  
+
   static get styles() { return css`
     .card-config { padding: 4px; }
     .section-title { font-weight: bold; font-size: 14px; margin: 16px 0 8px 0; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 1px; }
     .config-box { background: rgba(128, 128, 128, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, 0.1); }
-    
-    .team-item-card { 
-      background: var(--card-background-color, rgba(255, 255, 255, 0.03)); 
-      border: 1px solid var(--divider-color, rgba(128, 128, 128, 0.2)); 
-      border-radius: 8px; 
-      padding: 10px 12px; 
-      margin-bottom: 12px; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 8px; 
+
+    .team-item-card {
+      background: var(--card-background-color, rgba(255, 255, 255, 0.03));
+      border: 1px solid var(--divider-color, rgba(128, 128, 128, 0.2));
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    .team-item-header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
+    .team-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .team-number-label { 
-      font-size: 12px; 
-      font-weight: bold; 
-      color: var(--secondary-text-color); 
+    .team-number-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--secondary-text-color);
     }
-    .delete-icon { 
-      cursor: pointer; 
-      color: var(--error-color, #e74c3c); 
-      opacity: 0.8; 
-      transition: opacity 0.2s ease; 
-      --mdc-icon-size: 18px; 
+    .delete-icon {
+      cursor: pointer;
+      color: var(--error-color, #e74c3c);
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+      --mdc-icon-size: 18px;
     }
     .delete-icon:hover { opacity: 1; }
 
-    .team-color-subrow { 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      gap: 8px; 
-      padding-top: 4px; 
-      border-top: 1px dashed rgba(128, 128, 128, 0.15); 
-      font-size: 12px; 
+    .team-color-subrow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 4px;
+      border-top: 1px dashed rgba(128, 128, 128, 0.15);
+      font-size: 12px;
     }
-    .color-label { 
-      color: var(--secondary-text-color); 
+    .color-label {
+      color: var(--secondary-text-color);
     }
-    .color-controls { 
-      display: flex; 
-      align-items: center; 
-      gap: 6px; 
+    .color-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    .color-circle { 
-      -webkit-appearance: none; 
-      -moz-appearance: none; 
-      appearance: none; 
-      border: 1px solid var(--divider-color); 
-      width: 24px; 
-      height: 24px; 
-      border-radius: 50%; 
-      cursor: pointer; 
-      background: none; 
-      padding: 0; 
+    .color-circle {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      border: 1px solid var(--divider-color);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: none;
+      padding: 0;
     }
     .color-circle::-webkit-color-swatch-wrapper { padding: 0; }
     .color-circle::-webkit-color-swatch { border: none; border-radius: 50%; }
-    .color-text-input { 
-      width: 62px; 
-      border: 1px solid var(--divider-color); 
-      background: var(--card-background-color, #1e1e1e); 
-      color: var(--primary-text-color); 
-      font-size: 11px; 
-      padding: 3px 6px; 
-      border-radius: 4px; 
-      text-transform: uppercase; 
+    .color-text-input {
+      width: 62px;
+      border: 1px solid var(--divider-color);
+      background: var(--card-background-color, #1e1e1e);
+      color: var(--primary-text-color);
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
     }
-    .reset-color-btn { 
-      background: none; 
-      border: 1px solid var(--divider-color); 
-      color: var(--secondary-text-color); 
-      border-radius: 4px; 
-      padding: 2px 6px; 
-      font-size: 10px; 
-      cursor: pointer; 
-      transition: all 0.2s ease; 
+    .reset-color-btn {
+      background: none;
+      border: 1px solid var(--divider-color);
+      color: var(--secondary-text-color);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
-    .reset-color-btn:hover { 
-      color: var(--primary-text-color); 
-      background: rgba(128, 128, 128, 0.1); 
+    .reset-color-btn:hover {
+      color: var(--primary-text-color);
+      background: rgba(128, 128, 128, 0.1);
     }
 
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; transition: opacity 0.2s ease; }
     .switch-row:last-child { margin-bottom: 0; }
     .switch-row.disabled, .help-text.disabled { opacity: 0.4; pointer-events: none; }
-    
+
     .select-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 14px; }
     .select-label { color: var(--primary-text-color); }
     .custom-select { background: var(--card-background-color, #1e1e1e); color: var(--primary-text-color); border: 1px solid var(--divider-color); padding: 6px 10px; border-radius: 4px; font-size: 13px; cursor: pointer; outline: none; }
-    
+
     .help-text { font-size: 12px; opacity: 0.6; margin: 4px 0 8px 0; line-height: 1.2; font-style: italic; transition: opacity 0.2s ease; }
-  `; }
+    `; }
 }
 customElements.define("compact-team-tracker-editor", CompactTeamTrackerEditor);
 
 // --- KARTE ---
 class CompactTeamTracker extends LitElement {
-  static get properties() { 
-    return { 
-      hass: {}, 
-      config: {}, 
-      _currentSlide: { type: Number } 
-    }; 
+  static get properties() {
+    return {
+      hass: {},
+      config: {},
+      _currentSlide: { type: Number }
+    };
   }
 
   constructor() {
@@ -548,11 +550,11 @@ class CompactTeamTracker extends LitElement {
     this._touchStartX = 0;
     this._touchEndX = 0;
   }
-  
-  setConfig(config) { 
-    this.config = config; 
+
+  setConfig(config) {
+    this.config = config;
   }
-  
+
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
   static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
 
@@ -727,21 +729,21 @@ class CompactTeamTracker extends LitElement {
     if (!this.hass) return html``;
     const t = this._lang;
     const entities = this.config.entities || [];
-    
+
     if (entities.length === 0) {
       return html`
-        <ha-card style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
-          ${t.no_entities}
-        </ha-card>
+      <ha-card style="padding: 16px; text-align: center; color: var(--secondary-text-color); font-style: italic;">
+      ${t.no_entities}
+      </ha-card>
       `;
     }
 
     const states = entities
-      .map(id => this.hass.states[id])
-      .filter(s => s && s.attributes && (s.attributes.team_abbr || s.attributes.team_name || s.attributes.league || s.attributes.sport));
+    .map(id => this.hass.states[id])
+    .filter(s => s && s.attributes && (s.attributes.team_abbr || s.attributes.team_name || s.attributes.league || s.attributes.sport));
 
     if (states.length === 0) {
-       return html`<ha-card style="padding: 16px; text-align: center; opacity: 0.5;">(Warte auf Sensordaten...)</ha-card>`;
+      return html`<ha-card style="padding: 16px; text-align: center; opacity: 0.5;">(Warte auf Sensordaten...)</ha-card>`;
     }
 
     const prioId = this.config.priority_entity;
@@ -788,7 +790,7 @@ class CompactTeamTracker extends LitElement {
       const a = s.attributes;
       const isRacing = !a.opponent_name && !a.opponent_abbr && (a.position !== undefined || a.event_name);
       const isOffSeason = s.state === 'NOT_FOUND' || s.state === 'BYE' || (!isRacing && !a.opponent_abbr && !a.opponent_name && !a.date);
-      
+
       if (this.config.hide_offseason === true && isOffSeason) {
         return false;
       }
@@ -810,66 +812,66 @@ class CompactTeamTracker extends LitElement {
         this._currentSlide = 0;
       }
       return html`
-        <ha-card 
-          class="slider-card"
-          @touchstart="${(e) => this._handleTouchStart(e)}"
-          @touchend="${(e) => this._handleTouchEnd(e, displayList.length)}">
-          
-          <div class="slider-track" style="transform: translateX(-${this._currentSlide * 100}%);">
-            ${displayList.map(stateObj => {
-              const slideBg = this._resolveBackgroundColor(stateObj);
-              const slideStyle = slideBg ? `background-color: ${slideBg};` : '';
-              return html`
-                <div class="slider-slide" style="${slideStyle}">
-                  <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
-                    ${this.renderCardContent(stateObj, t, true)}
-                  </div>
-                </div>
-              `;
-            })}
-          </div>
+      <ha-card
+      class="slider-card"
+      @touchstart="${(e) => this._handleTouchStart(e)}"
+      @touchend="${(e) => this._handleTouchEnd(e, displayList.length)}">
 
-          <div class="slider-nav">
-            <button class="nav-arrow left" @click="${() => this._prevSlide(displayList.length)}">&#10094;</button>
-            <div class="slider-dots">
-              ${displayList.map((_, idx) => html`
-                <span 
-                  class="dot-indicator ${idx === this._currentSlide ? 'active' : ''}" 
-                  @click="${() => this._setSlide(idx)}">
-                </span>
-              `)}
-            </div>
-            <button class="nav-arrow right" @click="${() => this._nextSlide(displayList.length)}">&#10095;</button>
-          </div>
+      <div class="slider-track" style="transform: translateX(-${this._currentSlide * 100}%);">
+      ${displayList.map(stateObj => {
+        const slideBg = this._resolveBackgroundColor(stateObj);
+        const slideStyle = slideBg ? `background-color: ${slideBg};` : '';
+        return html`
+        <div class="slider-slide" style="${slideStyle}">
+        <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
+        ${this.renderCardContent(stateObj, t, true)}
+        </div>
+        </div>
+        `;
+      })}
+      </div>
+
+      <div class="slider-nav">
+      <button class="nav-arrow left" @click="${() => this._prevSlide(displayList.length)}">&#10094;</button>
+      <div class="slider-dots">
+      ${displayList.map((_, idx) => html`
+        <span
+        class="dot-indicator ${idx === this._currentSlide ? 'active' : ''}"
+        @click="${() => this._setSlide(idx)}">
+        </span>
+        `)}
+        </div>
+        <button class="nav-arrow right" @click="${() => this._nextSlide(displayList.length)}">&#10095;</button>
+        </div>
         </ha-card>
-      `;
+        `;
     }
 
     return html`
-      <ha-card>
-        <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
-          ${displayList.map((stateObj, index) => html`
-            ${this.renderCardContent(stateObj, t, false)}
-            ${index < displayList.length - 1 ? html`<div class="spacer"></div>` : ''}
-          `)}
-        </div>
+    <ha-card>
+    <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
+    ${displayList.map((stateObj, index) => html`
+      ${this.renderCardContent(stateObj, t, false)}
+      ${index < displayList.length - 1 ? html`<div class="spacer"></div>` : ''}
+      `)}
+      </div>
       </ha-card>
-    `;
+      `;
   }
 
   renderCardContent(stateObj, t, isInsideSlider) {
     const a = stateObj.attributes;
     const isRacing = !a.opponent_name && !a.opponent_abbr && (a.position !== undefined || a.event_name);
     const isOffSeason = stateObj.state === 'NOT_FOUND' || stateObj.state === 'BYE' || (!isRacing && !a.opponent_abbr && !a.opponent_name && !a.date);
-    
+
     if (isOffSeason) {
       return this.config.layout === 'ultra'
-        ? this.renderUltraNoMatch(stateObj, t, isInsideSlider)
-        : this.renderNoMatch(stateObj, t, isInsideSlider);
+      ? this.renderUltraNoMatch(stateObj, t, isInsideSlider)
+      : this.renderNoMatch(stateObj, t, isInsideSlider);
     }
-    return this.config.layout === 'ultra' 
-      ? this.renderUltraMatch(stateObj, t, isInsideSlider) 
-      : this.renderMatch(stateObj, t, isInsideSlider);
+    return this.config.layout === 'ultra'
+    ? this.renderUltraMatch(stateObj, t, isInsideSlider)
+    : this.renderMatch(stateObj, t, isInsideSlider);
   }
 
   // --- STANDARD SPIELFREI / OFF-SEASON LAYOUT ---
@@ -884,31 +886,31 @@ class CompactTeamTracker extends LitElement {
     const teamName = this._cleanName(a.team_name, a.team_abbr);
 
     return html`
-      <div class="card-wrapper off-season-card" style="${customStyle}">
-        ${showLeague ? html`
-          <div class="header-bg">
-            <div class="header">
-              <div class="league-box">
-                ${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}
-                <span>${a.league_name || a.league || ''}</span>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-        
-        <div class="content no-match-content ${!showLeague ? 'extra-padding' : ''}">
-          <div class="no-match-logo-wrap">
-            ${logoUrl ? html`
-              <img src="${logoUrl}" class="team-logo off-season-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`
-              <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>`}
-          </div>
-          <div class="no-match-message">
-            <div class="no-match-team-name">${teamName}</div>
-            <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
-          </div>
-        </div>
+    <div class="card-wrapper off-season-card" style="${customStyle}">
+    ${showLeague ? html`
+      <div class="header-bg">
+      <div class="header">
+      <div class="league-box">
+      ${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}
+      <span>${a.league_name || a.league || ''}</span>
       </div>
-    `;
+      </div>
+      </div>
+      ` : ''}
+
+      <div class="content no-match-content ${!showLeague ? 'extra-padding' : ''}">
+      <div class="no-match-logo-wrap">
+      ${logoUrl ? html`
+        <img src="${logoUrl}" class="team-logo off-season-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`
+        <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>`}
+        </div>
+        <div class="no-match-message">
+        <div class="no-match-team-name">${teamName}</div>
+        <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
+        </div>
+        </div>
+        </div>
+        `;
   }
 
   // --- ULTRA-COMPACT SPIELFREI LAYOUT ---
@@ -922,43 +924,43 @@ class CompactTeamTracker extends LitElement {
     const teamName = this._cleanName(a.team_abbr, a.team_name);
 
     return html`
-      <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
-        <div class="ultra-team left">
-          ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
-          <span class="ultra-abbr">${teamName}</span>
-        </div>
-        <div class="ultra-info">
-          <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
-            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
-          </span>
-        </div>
-        <div class="ultra-team right">
-          ${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" style="opacity: 0.7;" @error="${e => e.target.style.display='none'}">` : ''}
-        </div>
-      </div>
+    <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
+    <div class="ultra-team left">
+    ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+    <span class="ultra-abbr">${teamName}</span>
+    </div>
+    <div class="ultra-info">
+    <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
+    ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
+    </span>
+    </div>
+    <div class="ultra-team right">
+    ${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" style="opacity: 0.7;" @error="${e => e.target.style.display='none'}">` : ''}
+    </div>
+    </div>
     `;
   }
 
   _renderLogoBox(side, shadowClass, isUltra = false) {
     const isTBD = !side.mainLogo || side.name === "TBD";
-    const logoClass = isUltra 
-      ? `ultra-logo ${side.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}`
-      : `team-logo ${side.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}`;
+    const logoClass = isUltra
+    ? `ultra-logo ${side.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}`
+    : `team-logo ${side.isHeadshot ? 'individual-headshot' : ''} ${shadowClass}`;
     const flagClass = isUltra ? "flag-circle-badge-ultra" : "flag-circle-badge";
     const fallbackClass = isUltra ? "tbd-placeholder-ultra" : "tbd-placeholder";
 
     return html`
-      <div class="${isUltra ? 'ultra-logo-wrap' : 'logo-badge-container'}">
-        ${!isTBD ? html`
-          <img src="${side.mainLogo}" class="${logoClass}" @error="${(e) => { e.target.style.display = 'none'; e.target.nextElementSibling?.classList.remove('has-img'); }}">
-          ${side.flag ? html`<img src="${side.flag}" class="${flagClass}" @error="${e => e.target.style.display='none'}">` : ''}
-        ` : html`
-          <div class="${fallbackClass}">
-            <ha-icon icon="mdi:help" style="${isUltra ? '--mdc-icon-size: 16px;' : '--mdc-icon-size: 24px;'} opacity: 0.6;"></ha-icon>
-          </div>
-        `}
+    <div class="${isUltra ? 'ultra-logo-wrap' : 'logo-badge-container'}">
+    ${!isTBD ? html`
+      <img src="${side.mainLogo}" class="${logoClass}" @error="${(e) => { e.target.style.display = 'none'; e.target.nextElementSibling?.classList.remove('has-img'); }}">
+      ${side.flag ? html`<img src="${side.flag}" class="${flagClass}" @error="${e => e.target.style.display='none'}">` : ''}
+      ` : html`
+      <div class="${fallbackClass}">
+      <ha-icon icon="mdi:help" style="${isUltra ? '--mdc-icon-size: 16px;' : '--mdc-icon-size: 24px;'} opacity: 0.6;"></ha-icon>
       </div>
-    `;
+      `}
+      </div>
+      `;
   }
 
   renderMatch(entityObj, t, isInsideSlider = false) {
@@ -966,7 +968,7 @@ class CompactTeamTracker extends LitElement {
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
     const delim = this.config.score_delimiter || ':';
-    
+
     const kDate = a.date ? new Date(a.date) : null;
     const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
     const fullDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
@@ -977,7 +979,7 @@ class CompactTeamTracker extends LitElement {
     const showTv = this.config.show_tv_network !== false;
     const marqueeEnabled = this.config.last_play_marquee === true;
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
-    
+
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
@@ -987,72 +989,72 @@ class CompactTeamTracker extends LitElement {
     const hasFooterContent = hasLocation || hasTv || hasLastPlay;
 
     return html`
-      <div class="card-wrapper" style="${customStyle}">
-        ${showLeague || s === 'IN' ? html`
-          <div class="header-bg">
-            <div class="header ${!showLeague ? 'no-league' : ''}">
-              ${showLeague ? html`
-                <div class="league-box">${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}<span>${a.league_name || a.league || ''}</span></div>
-              ` : ''}
-              ${s === 'IN' ? html`<div class="live-status"><span class="dot"></span> ${t.live} / ${a.clock || 'LIVE'}</div>` : (s === 'POST' ? html`<div class="status-post">${t.finished}</div>` : '')}
-            </div>
-          </div>
+    <div class="card-wrapper" style="${customStyle}">
+    ${showLeague || s === 'IN' ? html`
+      <div class="header-bg">
+      <div class="header ${!showLeague ? 'no-league' : ''}">
+      ${showLeague ? html`
+        <div class="league-box">${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}<span>${a.league_name || a.league || ''}</span></div>
+        ` : ''}
+        ${s === 'IN' ? html`<div class="live-status"><span class="dot"></span> ${t.live} / ${a.clock || 'LIVE'}</div>` : (s === 'POST' ? html`<div class="status-post">${t.finished}</div>` : '')}
+        </div>
+        </div>
         ` : ''}
 
         ${sides.isIndividual && a.event_name && a.event_name !== (a.league_name || a.league) ? html`
           <div class="event-name-banner">${a.event_name}</div>
-        ` : ''}
-        
-        <div class="content ${!showLeague && s !== 'IN' && (!sides.isIndividual || !a.event_name) ? 'extra-padding' : ''}">
+          ` : ''}
+
+          <div class="content ${!showLeague && s !== 'IN' && (!sides.isIndividual || !a.event_name) ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
-              ${this._renderLogoBox(sides.team, shadowClass, false)}
-              <div class="name">${sides.team.name}</div>
-              ${sides.team.rec ? html`<div class="record">${sides.team.rec}</div>` : ''}
+            ${this._renderLogoBox(sides.team, shadowClass, false)}
+            <div class="name">${sides.team.name}</div>
+            ${sides.team.rec ? html`<div class="record">${sides.team.rec}</div>` : ''}
             </div>
             <div class="score-area">
-              ${s === 'PRE' 
-                ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>` 
-                : html`<div class="racing-pos-box"><span class="racing-pos-label">${t.pos}</span><span class="score-nums">${sides.team.pos || '-'}</span></div>`
-              }
+            ${s === 'PRE'
+              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
+              : html`<div class="racing-pos-box"><span class="racing-pos-label">${t.pos}</span><span class="score-nums">${sides.team.pos || '-'}</span></div>`
+            }
             </div>
-          ` : html`
+            ` : html`
             <div class="team-box">
-              ${this._renderLogoBox(sides.left, shadowClass, false)}
-              <div class="name">${sides.left.name}</div>
-              ${this.config.show_record && sides.left.rec ? html`<div class="record">${sides.left.rec}</div>` : ''}
+            ${this._renderLogoBox(sides.left, shadowClass, false)}
+            <div class="name">${sides.left.name}</div>
+            ${this.config.show_record && sides.left.rec ? html`<div class="record">${sides.left.rec}</div>` : ''}
             </div>
             <div class="score-area">
-              ${s === 'PRE' 
-                ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>` 
-                : html`<div class="score-nums">${sides.left.score !== undefined ? sides.left.score : 0} ${delim} ${sides.right.score !== undefined ? sides.right.score : 0}</div>`
-              }
+            ${s === 'PRE'
+              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
+              : html`<div class="score-nums">${sides.left.score !== undefined ? sides.left.score : 0} ${delim} ${sides.right.score !== undefined ? sides.right.score : 0}</div>`
+            }
             </div>
             <div class="team-box">
-              ${this._renderLogoBox(sides.right, shadowClass, false)}
-              <div class="name">${sides.right.name}</div>
-              ${this.config.show_record && sides.right.rec ? html`<div class="record">${sides.right.rec}</div>` : ''}
+            ${this._renderLogoBox(sides.right, shadowClass, false)}
+            <div class="name">${sides.right.name}</div>
+            ${this.config.show_record && sides.right.rec ? html`<div class="record">${sides.right.rec}</div>` : ''}
             </div>
-          `}
-        </div>
+            `}
+            </div>
 
-        ${hasFooterContent ? html`
-          <div class="info-footer">
-            ${hasLocation ? html`
-              <div class="venue">${a.venue || ''}${a.location ? (a.venue ? `, ${a.location}` : a.location) : ''}</div>
-            ` : ''}
-            ${hasTv ? html`
-              <div class="tv-network"><ha-icon icon="mdi:television" class="tv-icon"></ha-icon>${a.tv_network || a.broadcast}</div>
-            ` : ''}
-            ${hasLastPlay ? html`
-              <div class="play-container ${marqueeEnabled ? 'marquee' : 'multiline'}">
-                <div class="play">${a.last_play}</div>
-              </div>
-            ` : ''}
-          </div>
-        ` : ''}
-      </div>
-    `;
+            ${hasFooterContent ? html`
+              <div class="info-footer">
+              ${hasLocation ? html`
+                <div class="venue">${a.venue || ''}${a.location ? (a.venue ? `, ${a.location}` : a.location) : ''}</div>
+                ` : ''}
+                ${hasTv ? html`
+                  <div class="tv-network"><ha-icon icon="mdi:television" class="tv-icon"></ha-icon>${a.tv_network || a.broadcast}</div>
+                  ` : ''}
+                  ${hasLastPlay ? html`
+                    <div class="play-container ${marqueeEnabled ? 'marquee' : 'multiline'}">
+                    <div class="play">${a.last_play}</div>
+                    </div>
+                    ` : ''}
+                    </div>
+                    ` : ''}
+                    </div>
+                    `;
   }
 
   renderUltraMatch(entityObj, t, isInsideSlider = false) {
@@ -1070,255 +1072,255 @@ class CompactTeamTracker extends LitElement {
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
     return html`
-      <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
-        ${sides.isRacing ? html`
-          <div class="ultra-team left">
-            ${this._renderLogoBox(sides.team, shadowClass, true)}
-            <span class="ultra-abbr">${sides.team.name}</span>
-          </div>
-          <div class="ultra-info">
-            ${s === 'PRE' 
-              ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
-              : html`<span class="ultra-score live-text-large">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
-            }
-          </div>
-          <div class="ultra-team right">${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}</div>
-        ` : html`
-          <div class="ultra-team left">
-            ${this._renderLogoBox(sides.left, shadowClass, true)}
-            <span class="ultra-abbr">${sides.left.name}</span>
-          </div>
-          <div class="ultra-info">
-            ${s === 'PRE' 
-              ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
-              : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
-            }
-          </div>
-          <div class="ultra-team right">
-            <span class="ultra-abbr">${sides.right.name}</span>
-            ${this._renderLogoBox(sides.right, shadowClass, true)}
-          </div>
-        `}
+    <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
+    ${sides.isRacing ? html`
+      <div class="ultra-team left">
+      ${this._renderLogoBox(sides.team, shadowClass, true)}
+      <span class="ultra-abbr">${sides.team.name}</span>
       </div>
-    `;
+      <div class="ultra-info">
+      ${s === 'PRE'
+        ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>`
+        : html`<span class="ultra-score live-text-large">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
+      }
+      </div>
+      <div class="ultra-team right">${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}</div>
+      ` : html`
+      <div class="ultra-team left">
+      ${this._renderLogoBox(sides.left, shadowClass, true)}
+      <span class="ultra-abbr">${sides.left.name}</span>
+      </div>
+      <div class="ultra-info">
+      ${s === 'PRE'
+        ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>`
+        : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
+      }
+      </div>
+      <div class="ultra-team right">
+      <span class="ultra-abbr">${sides.right.name}</span>
+      ${this._renderLogoBox(sides.right, shadowClass, true)}
+      </div>
+      `}
+      </div>
+      `;
   }
 
   static get styles() {
     return css`
-      ha-card { overflow: hidden; position: relative; }
-      .card-wrapper { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; border-radius: inherit; transition: background-color 0.3s ease; }
-      .spacer { height: 1px; background: var(--divider-color); opacity: 0.15; margin: 4px 16px; }
-      .header-bg { background: rgba(255, 255, 255, 0.05); padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-      .header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: bold; min-height: 20px; }
-      .header.no-league { justify-content: center; }
-      .league-box { display: flex; align-items: center; }
-      .league-logo { width: 18px; height: 18px; object-fit: contain; margin-right: 6px; }
-      .live-status { color: #e74c3c; display: flex; align-items: center; }
-      .status-post { opacity: 0.7; }
-      .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
-      
-      /* EVENT NAME BANNER FÜR EINZELSPORTARTEN */
-      .event-name-banner {
-        text-align: center;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.4px;
-        color: var(--primary-text-color);
-        opacity: 0.9;
-        padding: 6px 12px 0;
-        line-height: 1.2;
-      }
+    ha-card { overflow: hidden; position: relative; }
+    .card-wrapper { width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; border-radius: inherit; transition: background-color 0.3s ease; }
+    .spacer { height: 1px; background: var(--divider-color); opacity: 0.15; margin: 4px 16px; }
+    .header-bg { background: rgba(255, 255, 255, 0.05); padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: bold; min-height: 20px; }
+    .header.no-league { justify-content: center; }
+    .league-box { display: flex; align-items: center; }
+    .league-logo { width: 18px; height: 18px; object-fit: contain; margin-right: 6px; }
+    .live-status { color: #e74c3c; display: flex; align-items: center; }
+    .status-post { opacity: 0.7; }
+    .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
 
-      .content { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; width: 100%; box-sizing: border-box; }
-      .extra-padding { padding-top: 12px; }
-      .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
-      .team-box.single-side { flex: 1.5; }
-      
-      .logo-badge-container { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; }
-      .team-logo { width: 48px; height: 48px; object-fit: contain; }
-      .team-logo.individual-headshot { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
-      
-      /* TBD PLATZHALTER */
-      .tbd-placeholder { 
-        width: 48px; 
-        height: 48px; 
-        border-radius: 50%; 
-        border: 1.5px dashed var(--divider-color, rgba(255,255,255,0.2)); 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        background: rgba(128, 128, 128, 0.05); 
-      }
-      .tbd-placeholder-ultra { 
-        width: 28px; 
-        height: 28px; 
-        border-radius: 50%; 
-        border: 1px dashed var(--divider-color, rgba(255,255,255,0.2)); 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        background: rgba(128, 128, 128, 0.05); 
-      }
+    /* EVENT NAME BANNER FÜR EINZELSPORTARTEN */
+    .event-name-banner {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: var(--primary-text-color);
+      opacity: 0.9;
+      padding: 6px 12px 0;
+      line-height: 1.2;
+    }
 
-      /* KREISRUNDE FLAGGE OBEN RECHTS */
-      .flag-circle-badge { 
-        position: absolute; 
-        top: -2px; 
-        right: -6px; 
-        width: 18px; 
-        height: 18px; 
-        border-radius: 50%; 
-        object-fit: cover; 
-        border: 1.5px solid var(--card-background-color, #1c1c1e); 
-        box-shadow: 0 1px 4px rgba(0,0,0,0.4); 
-        z-index: 2; 
-      }
-      
-      .ultra-logo-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
-      .ultra-logo { width: 28px; height: 28px; object-fit: contain; }
-      .ultra-logo.individual-headshot { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
-      
-      .flag-circle-badge-ultra { 
-        position: absolute; 
-        top: -3px; 
-        right: -4px; 
-        width: 13px; 
-        height: 13px; 
-        border-radius: 50%; 
-        object-fit: cover; 
-        border: 1px solid var(--card-background-color, #1c1c1e); 
-        z-index: 2; 
-      }
+    .content { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; width: 100%; box-sizing: border-box; }
+    .extra-padding { padding-top: 12px; }
+    .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .team-box.single-side { flex: 1.5; }
 
-      .custom-logo-shadow { filter: drop-shadow(0 0 6px #d3d3d3) !important; }
-      
-      /* VOLLSTÄNDIGER NAME OHNE ABSCHNEIDEN MIT SCHÖNEM UMBRUCH */
-      .name { 
-        font-size: 13px; 
-        font-weight: 800; 
-        margin-top: 4px; 
-        max-width: 130px; 
-        white-space: normal; 
-        line-height: 1.15; 
-        word-break: normal; 
-        text-align: center; 
-      }
-      .record { font-size: 10px; opacity: 0.6; }
-      .score-area { flex: 1.5; display: flex; justify-content: center; align-items: center; }
-      .kickoff-wrapper { text-align: center; }
-      .score-nums { font-size: 30px; font-weight: 900; }
-      .kickoff-time { font-size: 24px; font-weight: 800; line-height: 1; }
-      .kickoff-date { font-size: 12px; font-weight: bold; margin-top: 2px; }
-      .kickoff-exact { font-size: 10px; opacity: 0.6; }
-      .racing-pos-box { display: flex; flex-direction: column; align-items: center; }
-      .racing-pos-label { font-size: 11px; font-weight: bold; opacity: 0.7; text-transform: uppercase; }
-      
-      /* Off-Season Layout */
-      .no-match-content { 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        gap: 20px; 
-        padding: 16px 20px; 
-        min-height: 80px; 
-      }
-      .no-match-logo-wrap { 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        width: 56px; 
-        height: 56px; 
-        border-radius: 50%; 
-        flex-shrink: 0; 
-      }
-      .off-season-logo { 
-        width: 44px; 
-        height: 44px; 
-        object-fit: contain; 
-      }
-      .off-season-icon-fallback { 
-        --mdc-icon-size: 32px; 
-        color: var(--secondary-text-color); 
-        opacity: 0.8; 
-      }
-      .no-match-message { 
-        display: flex; 
-        flex-direction: column; 
-        justify-content: center; 
-        text-align: left; 
-      }
-      .no-match-team-name { 
-        font-size: 17px; 
-        font-weight: 800; 
-        letter-spacing: 0.5px; 
-        color: var(--primary-text-color); 
-        line-height: 1.2; 
-        margin-bottom: 2px; 
-      }
-      .no-match-title { 
-        font-size: 14px; 
-        font-weight: 500; 
-        opacity: 0.85; 
-        color: var(--primary-text-color); 
-      }
-      .ultra-off-season { 
-        padding: 12px 16px; 
-      }
+    .logo-badge-container { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+    .team-logo { width: 48px; height: 48px; object-fit: contain; }
+    .team-logo.individual-headshot { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
 
-      .info-footer { padding: 4px 12px; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
-      .venue { font-weight: bold; margin-bottom: 2px; }
-      .tv-network { font-size: 10px; opacity: 0.85; display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 2px; }
-      .tv-icon { --mdc-icon-size: 12px; }
-      .play-container { width: 100%; max-width: 100%; position: relative; margin-top: 4px; box-sizing: border-box; overflow: hidden; }
-      .play-container.marquee { overflow: hidden; white-space: nowrap; }
-      .play-container.multiline { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
-      .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
-      .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }
-      @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
-      .ultra-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; width: 100%; box-sizing: border-box; border-radius: inherit; transition: background-color 0.3s ease; position: relative; }
-      .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
-      .ultra-team.right { justify-content: flex-end; }
-      
-      /* ULTRA-COMPACT NAME WRAPPING */
-      .ultra-abbr { 
-        font-size: 13px; 
-        font-weight: 800; 
-        max-width: 110px; 
-        white-space: normal; 
-        line-height: 1.1; 
-        word-break: normal; 
-      }
-      .ultra-team.right .ultra-abbr { text-align: right; }
-      
-      .ultra-info { flex: 1.2; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
-      .ultra-score, .ultra-main-text { font-size: 18px; font-weight: 900; }
-      .live-text-large { font-size: 22px; font-weight: 900; color: #e74c3c; }
-      .ultra-subtext { font-size: 10px; opacity: 0.7; font-weight: bold; display: flex; flex-direction: column; }
-      
-      .live-border::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3.5px;
-        height: 34%;
-        background-color: #e74c3c;
-        border-radius: 0 4px 4px 0;
-      }
+    /* TBD PLATZHALTER */
+    .tbd-placeholder {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 1.5px dashed var(--divider-color, rgba(255,255,255,0.2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(128, 128, 128, 0.05);
+    }
+    .tbd-placeholder-ultra {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px dashed var(--divider-color, rgba(255,255,255,0.2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(128, 128, 128, 0.05);
+    }
 
-      @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    /* KREISRUNDE FLAGGE OBEN RECHTS */
+    .flag-circle-badge {
+      position: absolute;
+      top: -2px;
+      right: -6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid var(--card-background-color, #1c1c1e);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      z-index: 2;
+    }
 
-      /* SLIDER / CAROUSEL STYLES */
-      .slider-card { overflow: hidden; width: 100%; box-sizing: border-box; padding-bottom: 6px; }
-      .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); width: 100%; }
-      .slider-slide { min-width: 100%; max-width: 100%; width: 100%; flex-shrink: 0; box-sizing: border-box; overflow: hidden; transition: background-color 0.3s ease; }
-      .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); }
-      .nav-arrow { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--primary-text-color); opacity: 0.6; padding: 4px 8px; transition: opacity 0.2s ease; }
-      .nav-arrow:hover { opacity: 1; }
-      .slider-dots { display: flex; gap: 6px; align-items: center; }
-      .dot-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--primary-text-color); opacity: 0.2; cursor: pointer; transition: all 0.2s ease; }
-      .dot-indicator.active { opacity: 0.9; transform: scale(1.3); background: var(--primary-color); }
+    .ultra-logo-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+    .ultra-logo { width: 28px; height: 28px; object-fit: contain; }
+    .ultra-logo.individual-headshot { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+
+    .flag-circle-badge-ultra {
+      position: absolute;
+      top: -3px;
+      right: -4px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--card-background-color, #1c1c1e);
+      z-index: 2;
+    }
+
+    .custom-logo-shadow { filter: drop-shadow(0 0 6px #d3d3d3) !important; }
+
+    /* VOLLSTÄNDIGER NAME OHNE ABSCHNEIDEN MIT SCHÖNEM UMBRUCH */
+    .name {
+      font-size: 13px;
+      font-weight: 800;
+      margin-top: 4px;
+      max-width: 130px;
+      white-space: normal;
+      line-height: 1.15;
+      word-break: normal;
+      text-align: center;
+    }
+    .record { font-size: 10px; opacity: 0.6; }
+    .score-area { flex: 1.5; display: flex; justify-content: center; align-items: center; }
+    .kickoff-wrapper { text-align: center; }
+    .score-nums { font-size: 30px; font-weight: 900; }
+    .kickoff-time { font-size: 24px; font-weight: 800; line-height: 1; }
+    .kickoff-date { font-size: 12px; font-weight: bold; margin-top: 2px; }
+    .kickoff-exact { font-size: 10px; opacity: 0.6; }
+    .racing-pos-box { display: flex; flex-direction: column; align-items: center; }
+    .racing-pos-label { font-size: 11px; font-weight: bold; opacity: 0.7; text-transform: uppercase; }
+
+    /* Off-Season Layout */
+    .no-match-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 16px 20px;
+      min-height: 80px;
+    }
+    .no-match-logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .off-season-logo {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+    }
+    .off-season-icon-fallback {
+      --mdc-icon-size: 32px;
+      color: var(--secondary-text-color);
+      opacity: 0.8;
+    }
+    .no-match-message {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: left;
+    }
+    .no-match-team-name {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: var(--primary-text-color);
+      line-height: 1.2;
+      margin-bottom: 2px;
+    }
+    .no-match-title {
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0.85;
+      color: var(--primary-text-color);
+    }
+    .ultra-off-season {
+      padding: 12px 16px;
+    }
+
+    .info-footer { padding: 4px 12px; border-top: 1px solid var(--divider-color); text-align: center; font-size: 10px; opacity: 0.7; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; word-break: break-word; overflow-wrap: anywhere; }
+    .venue { font-weight: bold; margin-bottom: 2px; }
+    .tv-network { font-size: 10px; opacity: 0.85; display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 2px; }
+    .tv-icon { --mdc-icon-size: 12px; }
+    .play-container { width: 100%; max-width: 100%; position: relative; margin-top: 4px; box-sizing: border-box; overflow: hidden; }
+    .play-container.marquee { overflow: hidden; white-space: nowrap; }
+    .play-container.multiline { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+    .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
+    .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }
+    @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+    .ultra-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; width: 100%; box-sizing: border-box; border-radius: inherit; transition: background-color 0.3s ease; position: relative; }
+    .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .ultra-team.right { justify-content: flex-end; }
+
+    /* ULTRA-COMPACT NAME WRAPPING */
+    .ultra-abbr {
+      font-size: 13px;
+      font-weight: 800;
+      max-width: 110px;
+      white-space: normal;
+      line-height: 1.1;
+      word-break: normal;
+    }
+    .ultra-team.right .ultra-abbr { text-align: right; }
+
+    .ultra-info { flex: 1.2; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
+    .ultra-score, .ultra-main-text { font-size: 18px; font-weight: 900; }
+    .live-text-large { font-size: 22px; font-weight: 900; color: #e74c3c; }
+    .ultra-subtext { font-size: 10px; opacity: 0.7; font-weight: bold; display: flex; flex-direction: column; }
+
+    .live-border::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3.5px;
+      height: 34%;
+      background-color: #e74c3c;
+      border-radius: 0 4px 4px 0;
+    }
+
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    /* SLIDER / CAROUSEL STYLES */
+    .slider-card { overflow: hidden; width: 100%; box-sizing: border-box; padding-bottom: 6px; }
+    .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); width: 100%; }
+    .slider-slide { min-width: 100%; max-width: 100%; width: 100%; flex-shrink: 0; box-sizing: border-box; overflow: hidden; transition: background-color 0.3s ease; }
+    .slider-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px 0; border-top: 1px solid rgba(128, 128, 128, 0.1); }
+    .nav-arrow { background: none; border: none; font-size: 14px; cursor: pointer; color: var(--primary-text-color); opacity: 0.6; padding: 4px 8px; transition: opacity 0.2s ease; }
+    .nav-arrow:hover { opacity: 1; }
+    .slider-dots { display: flex; gap: 6px; align-items: center; }
+    .dot-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--primary-text-color); opacity: 0.2; cursor: pointer; transition: all 0.2s ease; }
+    .dot-indicator.active { opacity: 0.9; transform: scale(1.3); background: var(--primary-color); }
     `;
   }
 }

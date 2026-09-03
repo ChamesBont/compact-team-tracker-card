@@ -1021,7 +1021,14 @@ class CompactTeamTracker extends LitElement {
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
-    const hasLocation = showLocation && (a.venue || a.location);
+    // Echte Event-Namen ermitteln (F1/UFC/Golf) und Team-vs-Team Strings filtern
+    const rawEvent = a.event_name || a.event || "";
+    const isTeamVsTeamString = rawEvent.includes(" at ") || rawEvent.includes(" vs ") || rawEvent.includes(" vs. ");
+    const displayEventName = (!isTeamVsTeamString && rawEvent && rawEvent !== (a.league_name || a.league)) 
+      ? rawEvent 
+      : (sides.isRacing && a.venue ? a.venue : null);
+
+    const hasLocation = showLocation && (a.venue || a.location) && !sides.isRacing;
     const hasTv = showTv && (a.tv_network || a.broadcast);
     const hasLastPlay = showLastPlay && s === 'IN' && a.last_play;
     const hasFooterContent = hasLocation || hasTv || hasLastPlay;
@@ -1039,11 +1046,11 @@ class CompactTeamTracker extends LitElement {
           </div>
         ` : ''}
 
-        ${a.event_name && a.event_name !== (a.league_name || a.league) ? html`
-          <div class="event-name-banner">${a.event_name}</div>
+        ${displayEventName ? html`
+          <div class="event-name-banner">${displayEventName}</div>
         ` : ''}
         
-        <div class="content ${!showLeague && s !== 'IN' && !a.event_name ? 'extra-padding' : ''}">
+        <div class="content ${!showLeague && s !== 'IN' && !displayEventName ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
               ${this._renderLogoBox(sides.team, shadowClass, false)}
@@ -1110,6 +1117,13 @@ class CompactTeamTracker extends LitElement {
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
+    // Echte Event-Namen ermitteln
+    const rawEvent = a.event_name || a.event || "";
+    const isTeamVsTeamString = rawEvent.includes(" at ") || rawEvent.includes(" vs ") || rawEvent.includes(" vs. ");
+    const displayEventName = (!isTeamVsTeamString && rawEvent && rawEvent !== (a.league_name || a.league)) 
+      ? rawEvent 
+      : (sides.isRacing && a.venue ? a.venue : null);
+
     return html`
       <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
         ${sides.isRacing ? html`
@@ -1118,7 +1132,7 @@ class CompactTeamTracker extends LitElement {
             <span class="ultra-abbr">${sides.team.name}</span>
           </div>
           <div class="ultra-info">
-            ${a.event_name && a.event_name !== (a.league_name || a.league) ? html`<span class="ultra-event-name">${a.event_name}</span>` : ''}
+            ${displayEventName ? html`<span class="ultra-event-name">${displayEventName}</span>` : ''}
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
               : html`<span class="ultra-score live-text-large">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : terms.finished}</span></div>`
@@ -1131,7 +1145,7 @@ class CompactTeamTracker extends LitElement {
             <span class="ultra-abbr">${sides.left.name}</span>
           </div>
           <div class="ultra-info">
-            ${a.event_name && a.event_name !== (a.league_name || a.league) ? html`<span class="ultra-event-name">${a.event_name}</span>` : ''}
+            ${displayEventName ? html`<span class="ultra-event-name">${displayEventName}</span>` : ''}
             ${s === 'PRE' 
               ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext">${timeStr}</span>` 
               : html`<span class="ultra-score live-text-large">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : terms.finished}</span></div>`
@@ -1145,7 +1159,7 @@ class CompactTeamTracker extends LitElement {
       </div>
     `;
   }
-
+  
   static get styles() {
     return css`
       ha-card { overflow: hidden; position: relative; }

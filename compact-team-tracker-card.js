@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.1-beta4 !!!");
+console.log("!!! TEAM TRACKER v2.1.0 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -39,7 +39,7 @@ const LANG = {
     home_position_label: "Heim-Position",
     home_left: "Links (Europäischer Standard)",
     home_right: "Rechts (US / Away @ Home)",
-    delimiter_label: "Spielstand-Trennzeichen",
+    delimiter_label: "Trennzeichen",
     delimiter_colon: "Doppelpunkt ( : )",
     delimiter_dash: "Bindestrich ( - )",
     match_info_section: "Event-Informationen",
@@ -78,7 +78,7 @@ const LANG = {
     home_position_label: "Home position",
     home_left: "Left (European standard)",
     home_right: "Right (US / Away @ Home)",
-    delimiter_label: "Score delimiter",
+    delimiter_label: "Delimiter",
     delimiter_colon: "Colon ( : )",
     delimiter_dash: "Dash ( - )",
     match_info_section: "Event Information",
@@ -137,40 +137,6 @@ class CompactTeamTrackerEditor extends LitElement {
     return attr.toLowerCase().includes("espn") || stateObj.entity_id.includes("team_tracker");
   }
 
-  _getMatchTerm(stateObj) {
-    const isDe = (this.hass?.language || 'de') === 'de';
-    if (!stateObj || !stateObj.attributes) {
-      return {
-        hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
-        noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
-      };
-    }
-    const sport = (stateObj.attributes.sport || stateObj.attributes.league || "").toLowerCase();
-
-    if (sport.includes("mma") || sport.includes("ufc") || sport.includes("box") || sport.includes("kickbox")) {
-      return {
-        hideFinished: isDe ? "Beendete Kämpfe ausblenden" : "Hide finished fights",
-        noUpcoming: isDe ? "Keine anstehenden Kämpfe" : "No upcoming fights"
-      };
-    }
-    if (sport.includes("racing") || sport.includes("f1") || sport.includes("nascar") || sport.includes("rally")) {
-      return {
-        hideFinished: isDe ? "Beendete Rennen ausblenden" : "Hide finished races",
-        noUpcoming: isDe ? "Keine anstehenden Rennen" : "No upcoming races"
-      };
-    }
-    if (sport.includes("tennis") || sport.includes("golf")) {
-      return {
-        hideFinished: isDe ? "Beendete Matches ausblenden" : "Hide finished matches",
-        noUpcoming: isDe ? "Keine anstehenden Matches" : "No upcoming matches"
-      };
-    }
-    return {
-      hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
-      noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
-    };
-  }
-
   render() {
     if (!this.hass || !this._config) return html``;
     const t = this._lang;
@@ -190,10 +156,6 @@ class CompactTeamTrackerEditor extends LitElement {
     const colors = this._config.team_colors || {};
     const homePos = this._config.home_team_position || 'left';
     const delimiter = this._config.score_delimiter || ':';
-
-    const firstEntityId = this._config.entities?.[0];
-    const firstStateObj = firstEntityId ? this.hass.states[firstEntityId] : null;
-    const terms = this._getMatchTerm(firstStateObj);
 
     return html`
       <div class="card-config">
@@ -294,15 +256,6 @@ class CompactTeamTrackerEditor extends LitElement {
             </ha-switch>
             <span>${t.show_league}</span>
           </div>
-          <div class="switch-row ${isUltra ? 'disabled' : ''}">
-            <ha-switch 
-              .checked="${this._config.show_event_name !== false}" 
-              .disabled="${isUltra}"
-              .configValue="${"show_event_name"}" 
-              @change="${this._toggleOption}">
-            </ha-switch>
-            <span>${t.show_event_name}</span>
-          </div>
           <div class="switch-row">
             <ha-switch 
               .checked="${this._config.logo_shadow === true}" 
@@ -365,7 +318,7 @@ class CompactTeamTrackerEditor extends LitElement {
               .configValue="${"only_today"}" 
               @change="${this._toggleOption}">
             </ha-switch>
-            <span>${terms.hideFinished}</span>
+            <span>${t.hide_finished}</span>
           </div>
           <p class="help-text">${t.hide_finished_help}</p>
 
@@ -601,45 +554,11 @@ class CompactTeamTracker extends LitElement {
   }
   
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
     return LANG[l] || LANG['en'];
-  }
-
-  _getMatchTerm(stateObj) {
-    const isDe = (this.hass?.language || 'de') === 'de';
-    if (!stateObj || !stateObj.attributes) {
-      return {
-        hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
-        noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
-      };
-    }
-    const sport = (stateObj.attributes.sport || stateObj.attributes.league || "").toLowerCase();
-
-    if (sport.includes("mma") || sport.includes("ufc") || sport.includes("box") || sport.includes("kickbox")) {
-      return {
-        hideFinished: isDe ? "Beendete Kämpfe ausblenden" : "Hide finished fights",
-        noUpcoming: isDe ? "Keine anstehenden Kämpfe" : "No upcoming fights"
-      };
-    }
-    if (sport.includes("racing") || sport.includes("f1") || sport.includes("nascar") || sport.includes("rally")) {
-      return {
-        hideFinished: isDe ? "Beendete Rennen ausblenden" : "Hide finished races",
-        noUpcoming: isDe ? "Keine anstehenden Rennen" : "No upcoming races"
-      };
-    }
-    if (sport.includes("tennis") || sport.includes("golf")) {
-      return {
-        hideFinished: isDe ? "Beendete Matches ausblenden" : "Hide finished matches",
-        noUpcoming: isDe ? "Keine anstehenden Matches" : "No upcoming matches"
-      };
-    }
-    return {
-      hideFinished: isDe ? "Beendete Spiele ausblenden" : "Hide finished matches",
-      noUpcoming: isDe ? "Keine anstehenden Spiele" : "No upcoming matches"
-    };
   }
 
   _prevSlide(max) {
@@ -957,7 +876,6 @@ class CompactTeamTracker extends LitElement {
   renderNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
-    const terms = this._getMatchTerm(entityObj);
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const showLeague = this.config.show_league !== false;
@@ -986,7 +904,7 @@ class CompactTeamTracker extends LitElement {
           </div>
           <div class="no-match-message">
             <div class="no-match-team-name">${teamName}</div>
-            <div class="no-match-title">${s === 'BYE' ? t.bye_week : terms.noUpcoming}</div>
+            <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
           </div>
         </div>
       </div>
@@ -997,7 +915,6 @@ class CompactTeamTracker extends LitElement {
   renderUltraNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
-    const terms = this._getMatchTerm(entityObj);
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const logoUrl = this._resolveBestTeamLogo(entityObj);
@@ -1012,7 +929,7 @@ class CompactTeamTracker extends LitElement {
         </div>
         <div class="ultra-info">
           <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
-            ${s === 'BYE' ? t.bye_week : terms.noUpcoming}
+            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
           </span>
         </div>
         <div class="ultra-team right">
@@ -1055,7 +972,6 @@ class CompactTeamTracker extends LitElement {
     const fullDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
     const showLeague = this.config.show_league !== false;
-    const showEventName = this.config.show_event_name !== false;
     const showLastPlay = this.config.show_last_play !== false;
     const showLocation = this.config.show_location !== false;
     const showTv = this.config.show_tv_network !== false;
@@ -1083,11 +999,11 @@ class CompactTeamTracker extends LitElement {
           </div>
         ` : ''}
 
-        ${showEventName && a.event_name && (sides.isIndividual || sides.isRacing) ? html`
+        ${sides.isIndividual && a.event_name && a.event_name !== (a.league_name || a.league) ? html`
           <div class="event-name-banner">${a.event_name}</div>
         ` : ''}
         
-        <div class="content ${!showLeague && s !== 'IN' && (!showEventName || !sides.isIndividual || !a.event_name) ? 'extra-padding' : ''}">
+        <div class="content ${!showLeague && s !== 'IN' && (!sides.isIndividual || !a.event_name) ? 'extra-padding' : ''}">
           ${sides.isRacing ? html`
             <div class="team-box single-side">
               ${this._renderLogoBox(sides.team, shadowClass, false)}

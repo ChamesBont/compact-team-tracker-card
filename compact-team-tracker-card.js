@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta12 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta13 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -712,17 +712,13 @@ class CompactTeamTracker extends LitElement {
   }
 
   _cleanName(abbr, name, friendlyName = '') {
-    // 1. Wenn ein valider Name existiert, nutze ihn
     if (name && name.trim() !== "" && name.trim() !== "*") return name;
-    
-    // 2. Wenn eine valide Abkürzung existiert, nutze sie
     if (abbr && abbr.trim() !== "" && abbr.trim() !== "*") return abbr;
 
-    // 3. Generischer Fallback aus friendly_name (entfernt Präfixe wie "Team Tracker" oder "DFB Pokal - ")
     if (friendlyName) {
       const cleaned = friendlyName
         .replace(/(teamtracker|tracker)/gi, '')
-        .split('-').pop() // Nimmt den hinteren Teil nach einem Bindestrich
+        .split('-').pop()
         .trim();
       if (cleaned) return cleaned;
     }
@@ -736,17 +732,14 @@ class CompactTeamTracker extends LitElement {
     const prefix = isOpponent ? "opponent_" : "team_";
     let headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
     
-    // Fallback-Hierarchie für HA-Sensoren
     const rawLogo = a[`${prefix}logo`] || a[`${prefix}team_logo`] || a.logo || a.entity_picture || a.icon || null;
     const id = a[`${prefix}id`] || a[`${prefix}athlete_id`] || a[`${prefix}player_id`] || a.athlete_id || a.player_id || null;
     const sport = (a.sport || a.league || "").toLowerCase();
 
-    // 1. Strikte Prüfung auf Einzelsportarten (F1, MMA, Golf etc.)
     const isIndividualSport = sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || 
                               sport.includes("golf") || sport.includes("racing") || sport.includes("f1") || 
                               sport.includes("rpm") || sport.includes("nascar") || sport.includes("indycar");
 
-    // 2. Headshot-URL nur bauen, wenn es auch wirklich eine Einzelsportart ist
     if (!headshot && id && isIndividualSport) {
       let sportKey = "rpm";
       if (sport.includes("mma") || sport.includes("ufc")) sportKey = "mma";
@@ -757,16 +750,12 @@ class CompactTeamTracker extends LitElement {
     }
 
     const flag = a[`${prefix}flag`] || a[`${prefix}country_flag`] || (headshot && rawLogo ? rawLogo : null);
-    
-    // 3. Wappen/Logo bevorzugen, Headshots nur für Einzelsport nutzen
     let mainLogo = (isIndividualSport && headshot) ? headshot : (rawLogo || headshot);
 
-    // 4. Fallback-Grafik (SVG-Schattenbild), falls gar kein Logo vorhanden ist
     if (!mainLogo) {
       mainLogo = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'><path fill='%23888888' opacity='0.3' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'/></svg>";
     }
 
-    // 5. Namen säubern & TBD-Platzhalter abfangen
     let rawName = a[`${prefix}name`] || a.name || a.friendly_name || "";
     let rawAbbr = a[`${prefix}abbr`] || a.abbr || "";
     
@@ -793,11 +782,9 @@ class CompactTeamTracker extends LitElement {
     const d = this._resolveAthleteData(a, false);
     if (d.mainLogo) return d.mainLogo;
 
-    // 1. Direkte Attribute abfragen
     if (a.team_logo) return a.team_logo;
     if (a.entity_picture) return a.entity_picture;
 
-    // 2. Suche in anderen Entitäten nach demselben Team (via Abkürzung oder ID)
     const myAbbr = a.team_abbr;
     const myId = a.team_id;
     const entities = this.config.entities || [];
@@ -817,18 +804,8 @@ class CompactTeamTracker extends LitElement {
       }
     }
 
-    // 3. Universeller ESPN-CDN-Fallback über Sportart + Team-ID
     if (a.sport && a.team_id) {
       return `https://a.espncdn.com/i/teamlogos/${a.sport.toLowerCase()}/500/${a.team_id}.png`;
-    }
-
-    return null;
-  }
-
-    // 3. Fallback: ESPN-Standard-URL basierend auf Sportart + Team-ID/Abkürzung
-    if (a.sport && a.team_id) {
-      const sportKey = a.sport.toLowerCase();
-      return `https://a.espncdn.com/i/teamlogos/${sportKey}/500/${a.team_id}.png`;
     }
 
     return null;
@@ -1033,7 +1010,6 @@ class CompactTeamTracker extends LitElement {
     const showLeague = this.config.show_league !== false;
     const showEventName = this.config.show_event_name !== false;
 
-    // Spezifische Abfrage aller Team Tracker Logo-Pfade
     const logoUrl = a.team_logo 
       || a.entity_picture 
       || a.team_athlete_headshot 

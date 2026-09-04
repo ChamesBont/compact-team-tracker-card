@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta4 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta5 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -1070,8 +1070,8 @@ class CompactTeamTracker extends LitElement {
     const sides = this._getMatchSides(a);
     
     const rawDelim = this.config.score_delimiter || ':';
-    const delim = rawDelim === 'none' ? '     ' : ` ${rawDelim} `;
-
+    const delim = rawDelim === 'none' ? '\u00A0\u00A0\u00A0\u00A0' : ` ${rawDelim} `;
+    
     const { timeStr, fullDateStr } = this._formatDateTime(a.date, t);
     const kickoffInStr = this._formatKickoffIn(a.date, t);
 
@@ -1166,7 +1166,7 @@ class CompactTeamTracker extends LitElement {
     const sides = this._getMatchSides(a);
     
     const rawDelim = this.config.score_delimiter || ':';
-    const delim = rawDelim === 'none' ? '     ' : rawDelim;
+    const delim = rawDelim === 'none' ? '\u00A0\u00A0\u00A0\u00A0' : rawDelim;
     
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 

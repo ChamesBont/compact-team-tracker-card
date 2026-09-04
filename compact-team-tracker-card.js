@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.3-beta2 !!!");
+console.log("!!! TEAM TRACKER v2.1.3-beta3 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -889,9 +889,15 @@ class CompactTeamTracker extends LitElement {
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const showLeague = this.config.show_league !== false;
+    const showEventName = this.config.show_event_name !== false;
     const logoUrl = this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_name, a.team_abbr);
+
+    // Datums- und Zeitformatierung
+    const kDate = a.date ? new Date(a.date) : null;
+    const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    const fullDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
     return html`
     <div class="card-wrapper off-season-card" style="${customStyle}">
@@ -906,7 +912,11 @@ class CompactTeamTracker extends LitElement {
       </div>
       ` : ''}
 
-      <div class="content no-match-content ${!showLeague ? 'extra-padding' : ''}">
+      ${showEventName && a.event_name && a.event_name !== (a.league_name || a.league) ? html`
+        <div class="event-name-banner">${a.event_name}</div>
+      ` : ''}
+
+      <div class="content no-match-content ${!showLeague && (!showEventName || !a.event_name) ? 'extra-padding' : ''}">
       <div class="no-match-logo-wrap">
       ${logoUrl ? html`
         <img src="${logoUrl}" class="team-logo off-season-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`
@@ -915,6 +925,11 @@ class CompactTeamTracker extends LitElement {
         <div class="no-match-message">
         <div class="no-match-team-name">${teamName}</div>
         <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
+        ${fullDateStr ? html`
+          <div class="no-match-date" style="font-size: 11px; opacity: 0.75; margin-top: 3px; font-weight: 600;">
+            ${fullDateStr} ${timeStr ? `• ${timeStr} Uhr` : ''}
+          </div>
+        ` : ''}
         </div>
         </div>
         </div>

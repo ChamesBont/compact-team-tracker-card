@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.3-beta3 !!!");
+console.log("!!! TEAM TRACKER v2.1.3-beta4 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -59,7 +59,11 @@ const LANG = {
     scheduled: "Geplant",
     finished: "Beendet",
     live: "LIVE",
+    no_upcoming_games: 'Keine anstehenden Events',
     bye_week: "Frei",
+    tomorrow: 'morgen',
+    in_day: 'in 1 Tag',
+    in_days: 'in {days} Tagen',
     pos: "Pos."
   },
   en: {
@@ -99,8 +103,11 @@ const LANG = {
     scheduled: "Scheduled",
     finished: "Finished",
     live: "LIVE",
-    bye_week: "Bye Week",
-    pos: "Pos."
+    no_upcoming_games: 'No Upcoming Events',
+    bye_week: 'Bye Week',
+    tomorrow: 'tomorrow',
+    in_day: 'in 1 day',
+    in_days: 'in {days} days'
   }
 };
 
@@ -894,10 +901,33 @@ class CompactTeamTracker extends LitElement {
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_name, a.team_abbr);
 
-    // Datums- und Zeitformatierung
+    // Datum & Sprache ermitteln
+    const currentLang = this.hass?.language || 'de';
+    const isDe = currentLang.startsWith('de');
+    const locale = isDe ? 'de-DE' : 'en-US';
+
     const kDate = a.date ? new Date(a.date) : null;
-    const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    const fullDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const timeStr = kDate ? kDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '';
+    const fullDateStr = kDate ? kDate.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+
+    // Relative Zeitangabe über Sprachobjekt (t)
+    let relativeStr = '';
+    if (kDate) {
+      const now = new Date();
+      const diffMs = kDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        relativeStr = t.tomorrow || 'morgen';
+      } else if (diffDays > 1) {
+        relativeStr = (t.in_days || 'in {days} Tagen').replace('{days}', diffDays);
+      }
+    }
+
+    // Datumszeile zusammenbauen
+    const formattedDateTime = fullDateStr 
+      ? `${fullDateStr}${timeStr ? ` • ${timeStr}${isDe ? ' Uhr' : ''}` : ''}`
+      : '';
 
     return html`
     <div class="card-wrapper off-season-card" style="${customStyle}">
@@ -924,10 +954,13 @@ class CompactTeamTracker extends LitElement {
         </div>
         <div class="no-match-message">
         <div class="no-match-team-name">${teamName}</div>
-        <div class="no-match-title">${s === 'BYE' ? t.bye_week : t.no_upcoming_games}</div>
-        ${fullDateStr ? html`
+        <div class="no-match-title">
+          ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
+          ${relativeStr ? html` <span style="font-weight: 400; opacity: 0.85;">(${relativeStr})</span>` : ''}
+        </div>
+        ${formattedDateTime ? html`
           <div class="no-match-date" style="font-size: 11px; opacity: 0.75; margin-top: 3px; font-weight: 600;">
-            ${fullDateStr} ${timeStr ? `• ${timeStr} Uhr` : ''}
+            ${formattedDateTime}
           </div>
         ` : ''}
         </div>
@@ -935,7 +968,7 @@ class CompactTeamTracker extends LitElement {
         </div>
         `;
   }
-
+  
   // --- ULTRA-COMPACT SPIELFREI LAYOUT ---
   renderUltraNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;

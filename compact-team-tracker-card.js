@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta6 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta7 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -720,13 +720,16 @@ class CompactTeamTracker extends LitElement {
   _resolveAthleteData(a, isOpponent = false) {
     const prefix = isOpponent ? "opponent_" : "team_";
     let headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
-    const rawLogo = a[`${prefix}logo`] || a.entity_picture || null;
+    const rawLogo = a[`${prefix}logo`] || a[`${prefix}team_logo`] || a.entity_picture || null;
     const id = a[`${prefix}id`] || a[`${prefix}athlete_id`] || a[`${prefix}player_id`] || a.athlete_id || a.player_id || null;
     const sport = (a.sport || a.league || "").toLowerCase();
 
-    // Nur bei echten Einzelsportarten nach Headshots suchen oder Fallbacks bauen
-    const isIndividualSport = sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("racing") || sport.includes("f1") || sport.includes("rpm") || !a.opponent_name;
+    // 1. Strikte Prüfung auf Einzelsportarten (F1, MMA, Golf etc.)
+    const isIndividualSport = sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || 
+                              sport.includes("golf") || sport.includes("racing") || sport.includes("f1") || 
+                              sport.includes("rpm") || sport.includes("nascar") || sport.includes("indycar");
 
+    // 2. Headshot-URL nur bauen, wenn es auch wirklich eine Einzelsportart ist
     if (!headshot && id && isIndividualSport) {
       let sportKey = "rpm";
       if (sport.includes("mma") || sport.includes("ufc")) sportKey = "mma";
@@ -737,16 +740,33 @@ class CompactTeamTracker extends LitElement {
     }
 
     const flag = a[`${prefix}flag`] || a[`${prefix}country_flag`] || (headshot && rawLogo ? rawLogo : null);
-    const mainLogo = (isIndividualSport && headshot) ? headshot : (rawLogo || headshot);
-    const name = this._cleanName(a[`${prefix}abbr`], a[`${prefix}name`]);
+    
+    // 3. Wappen/Logo bevorzugen, Headshots nur für Einzelsport nutzen
+    let mainLogo = (isIndividualSport && headshot) ? headshot : (rawLogo || headshot);
+
+    // 4. Fallback-Grafik (SVG-Schattenbild), falls gar kein Logo vorhanden ist
+    if (!mainLogo) {
+      mainLogo = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'><path fill='%23888888' opacity='0.3' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'/></svg>";
+    }
+
+    // 5. Namen säubern & TBD-Platzhalter abfangen
+    let rawName = a[`${prefix}name`] || "";
+    let rawAbbr = a[`${prefix}abbr`] || "";
+    
+    if (rawName.toUpperCase() === "TBD" || rawName.toUpperCase() === "TBA") {
+      rawName = "Noch offen (TBD)";
+      rawAbbr = "TBD";
+    }
+
+    const name = this._cleanName(rawAbbr, rawName);
     const isHeadshot = isIndividualSport && !!headshot;
 
     return {
       mainLogo: mainLogo,
       flag: (mainLogo && flag && mainLogo !== flag) ? flag : null,
       name: name,
-      score: a[`${prefix}score`],
-      rec: a[`${prefix}record`],
+      score: a[`${prefix}score`] ?? "-",
+      rec: a[`${prefix}record`] || null,
       isHeadshot: isHeadshot
     };
   }

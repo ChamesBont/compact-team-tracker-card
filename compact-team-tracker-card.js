@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta1 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta2 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -42,7 +42,7 @@ const LANG = {
     delimiter_label: "Trennzeichen",
     delimiter_colon: "Doppelpunkt ( : )",
     delimiter_dash: "Bindestrich ( - )",
-    delimiter_empty: "Leer (  )",
+    delimiter_empty: "Leer",
     match_info_section: "Event-Informationen",
     next_only: "Nur das nächste/aktuelle Event anzeigen",
     hide_finished: "Beendete Events ausblenden",
@@ -91,7 +91,7 @@ const LANG = {
     delimiter_label: "Delimiter",
     delimiter_colon: "Colon ( : )",
     delimiter_dash: "Dash ( - )",
-    delimiter_empty: "Empty (  )",
+    delimiter_empty: "Empty",
     match_info_section: "Event Information",
     next_only: "Show only next/current event",
     hide_finished: "Hide finished events",
@@ -324,7 +324,7 @@ class CompactTeamTrackerEditor extends LitElement {
         <select class="custom-select" .value="${delimiter}" @change="${(e) => this._selectOption('score_delimiter', e.target.value)}">
         <option value=":" ?selected="${delimiter === ':'}">${t.delimiter_colon}</option>
         <option value="-" ?selected="${delimiter === '-'}">${t.delimiter_dash}</option>
-        <option value="-" ?selected="${delimiter === ' '}">${t.delimiter_empty}</option>
+        <option value="-" ?selected="${delimiter === 'none'}">${t.delimiter_empty}</option>
         </select>
         </div>
         </div>
@@ -728,7 +728,7 @@ class CompactTeamTracker extends LitElement {
 
     // Fallback: Wenn kein direktes Headshot vorhanden ist, aber eine ID existiert
     if (!headshot && id) {
-      let sportKey = "racing";
+      let sportKey = "rpm"; // F1 / Motorsport verwendet bei ESPN das Kürzel 'rpm'
       if (sport.includes("mma") || sport.includes("ufc")) sportKey = "mma";
       else if (sport.includes("tennis")) sportKey = "tennis";
       else if (sport.includes("golf")) sportKey = "golf";
@@ -776,7 +776,7 @@ class CompactTeamTracker extends LitElement {
   _getMatchSides(a) {
     const sport = (a.sport || a.league || "").toLowerCase();
     const isRacingOrEvent = !a.opponent_name && !a.opponent_abbr && (a.position !== undefined || a.event_name);
-    const isIndividual = isRacingOrEvent || sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("boxing") || sport.includes("racing") || sport.includes("f1") || !!a.athlete_id || !!a.team_athlete_headshot;
+    const isIndividual = isRacingOrEvent || sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("boxing") || sport.includes("racing") || sport.includes("f1") || !!a.athlete_id || !!a.player_id || !!a.team_athlete_headshot;
 
     if (isRacingOrEvent) {
       const athlete = this._resolveAthleteData(a, false);
@@ -1072,7 +1072,8 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
-    const delim = this.config.score_delimiter || ':';
+    const rawDelim = this.config.score_delimiter || ':';
+    const delim = rawDelim === 'none' ? ' ' : ` ${rawDelim} `;
 
     const { timeStr, fullDateStr } = this._formatDateTime(a.date, t);
     const kickoffInStr = this._formatKickoffIn(a.date, t);
@@ -1166,7 +1167,8 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
-    const delim = this.config.score_delimiter || ':';
+    const rawDelim = this.config.score_delimiter || ':';
+    const delim = rawDelim === 'none' ? ' ' : rawDelim;
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
     const { timeStr, shortDateStr } = this._formatDateTime(a.date, t);

@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta7 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta8 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -718,9 +718,13 @@ class CompactTeamTracker extends LitElement {
   }
 
   _resolveAthleteData(a, isOpponent = false) {
+    if (!a) return { mainLogo: null, name: "-", score: "-", isHeadshot: false };
+
     const prefix = isOpponent ? "opponent_" : "team_";
     let headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
-    const rawLogo = a[`${prefix}logo`] || a[`${prefix}team_logo`] || a.entity_picture || null;
+    
+    // Fallback-Hierarchie für HA-Sensoren
+    const rawLogo = a[`${prefix}logo`] || a[`${prefix}team_logo`] || a.logo || a.entity_picture || a.icon || null;
     const id = a[`${prefix}id`] || a[`${prefix}athlete_id`] || a[`${prefix}player_id`] || a.athlete_id || a.player_id || null;
     const sport = (a.sport || a.league || "").toLowerCase();
 
@@ -750,8 +754,8 @@ class CompactTeamTracker extends LitElement {
     }
 
     // 5. Namen säubern & TBD-Platzhalter abfangen
-    let rawName = a[`${prefix}name`] || "";
-    let rawAbbr = a[`${prefix}abbr`] || "";
+    let rawName = a[`${prefix}name`] || a.name || a.friendly_name || "";
+    let rawAbbr = a[`${prefix}abbr`] || a.abbr || "";
     
     if (rawName.toUpperCase() === "TBD" || rawName.toUpperCase() === "TBA") {
       rawName = "Noch offen (TBD)";
@@ -783,8 +787,8 @@ class CompactTeamTracker extends LitElement {
         const otherState = this.hass.states[entId];
         if (otherState && otherState.attributes) {
           const oAttr = otherState.attributes;
-          if ((oAttr.team_abbr === myAbbr || oAttr.team_name === myAbbr) && oAttr.team_logo) {
-            return oAttr.team_logo;
+          if ((oAttr.team_abbr === myAbbr || oAttr.team_name === myAbbr) && (oAttr.team_logo || oAttr.entity_picture)) {
+            return oAttr.team_logo || oAttr.entity_picture;
           }
         }
       }

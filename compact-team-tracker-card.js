@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta11 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta12 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -711,9 +711,22 @@ class CompactTeamTracker extends LitElement {
     return null;
   }
 
-  _cleanName(abbr, name) {
-    if (abbr && abbr.trim() !== "" && abbr.trim() !== "*") return abbr;
+  _cleanName(abbr, name, friendlyName = '') {
+    // 1. Wenn ein valider Name existiert, nutze ihn
     if (name && name.trim() !== "" && name.trim() !== "*") return name;
+    
+    // 2. Wenn eine valide Abkürzung existiert, nutze sie
+    if (abbr && abbr.trim() !== "" && abbr.trim() !== "*") return abbr;
+
+    // 3. Generischer Fallback aus friendly_name (entfernt Präfixe wie "Team Tracker" oder "DFB Pokal - ")
+    if (friendlyName) {
+      const cleaned = friendlyName
+        .replace(/(teamtracker|tracker)/gi, '')
+        .split('-').pop() // Nimmt den hinteren Teil nach einem Bindestrich
+        .trim();
+      if (cleaned) return cleaned;
+    }
+
     return "TBD";
   }
 
@@ -776,25 +789,49 @@ class CompactTeamTracker extends LitElement {
   }
 
   _resolveBestTeamLogo(stateObj) {
-    const a = stateObj.attributes;
+    const a = stateObj.attributes || {};
     const d = this._resolveAthleteData(a, false);
     if (d.mainLogo) return d.mainLogo;
 
-    const myAbbr = a.team_abbr || a.team_name;
-    if (myAbbr && myAbbr !== "*") {
-      const entities = this.config.entities || [];
-      for (const entId of entities) {
-        const otherState = this.hass.states[entId];
-        if (otherState && otherState.attributes) {
-          const oAttr = otherState.attributes;
-          if ((oAttr.team_abbr === myAbbr || oAttr.team_name === myAbbr) && (oAttr.team_logo || oAttr.entity_picture)) {
-            return oAttr.team_logo || oAttr.entity_picture;
-          }
+    // 1. Direkte Attribute abfragen
+    if (a.team_logo) return a.team_logo;
+    if (a.entity_picture) return a.entity_picture;
+
+    // 2. Suche in anderen Entitäten nach demselben Team (via Abkürzung oder ID)
+    const myAbbr = a.team_abbr;
+    const myId = a.team_id;
+    const entities = this.config.entities || [];
+
+    for (const entId of entities) {
+      if (entId === stateObj.entity_id) continue;
+      const otherState = this.hass.states[entId];
+      if (otherState && otherState.attributes) {
+        const oAttr = otherState.attributes;
+        const isMatch = (myAbbr && myAbbr !== "*" && (oAttr.team_abbr === myAbbr || oAttr.opponent_abbr === myAbbr)) ||
+                        (myId && (oAttr.team_id === myId || oAttr.opponent_id === myId));
+        
+        if (isMatch) {
+          if (oAttr.team_abbr === myAbbr && oAttr.team_logo) return oAttr.team_logo;
+          if (oAttr.opponent_abbr === myAbbr && oAttr.opponent_logo) return oAttr.opponent_logo;
         }
       }
     }
 
-    return a.league_logo || null;
+    // 3. Universeller ESPN-CDN-Fallback über Sportart + Team-ID
+    if (a.sport && a.team_id) {
+      return `https://a.espncdn.com/i/teamlogos/${a.sport.toLowerCase()}/500/${a.team_id}.png`;
+    }
+
+    return null;
+  }
+
+    // 3. Fallback: ESPN-Standard-URL basierend auf Sportart + Team-ID/Abkürzung
+    if (a.sport && a.team_id) {
+      const sportKey = a.sport.toLowerCase();
+      return `https://a.espncdn.com/i/teamlogos/${sportKey}/500/${a.team_id}.png`;
+    }
+
+    return null;
   }
 
   _getMatchSides(a) {
@@ -1005,13 +1042,7 @@ class CompactTeamTracker extends LitElement {
 
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
-    // Namen-Fallback (team_name -> team_abbr -> friendly_name)
-    let teamName = a.team_name || a.team_abbr;
-    if (!teamName || teamName === "*" || teamName === "-") {
-      teamName = a.friendly_name 
-        ? a.friendly_name.replace(/(teamtracker|tracker)/gi, '').trim() 
-        : "TBD";
-    }
+    const teamName = this._cleanName(a.team_abbr, a.team_name, a.friendly_name);
 
     const { formattedDateTime } = this._formatDateTime(a.date, t);
     const relativeStr = this._formatKickoffIn(a.date, t);
@@ -1071,12 +1102,7 @@ class CompactTeamTracker extends LitElement {
 
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
-    let teamName = a.team_abbr || a.team_name;
-    if (!teamName || teamName === "*" || teamName === "-") {
-      teamName = a.friendly_name 
-        ? a.friendly_name.replace(/(teamtracker|tracker)/gi, '').trim() 
-        : "TBD";
-    }
+    const teamName = this._cleanName(a.team_abbr, a.team_name, a.friendly_name);
 
     return html`
     <div class="ultra-wrapper ultra-off-season" style="${customStyle}">

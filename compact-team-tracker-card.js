@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta2 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta3 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -42,7 +42,7 @@ const LANG = {
     delimiter_label: "Trennzeichen",
     delimiter_colon: "Doppelpunkt ( : )",
     delimiter_dash: "Bindestrich ( - )",
-    delimiter_empty: "Leer",
+    delimiter_none: "Keines (   )",
     match_info_section: "Event-Informationen",
     next_only: "Nur das nächste/aktuelle Event anzeigen",
     hide_finished: "Beendete Events ausblenden",
@@ -91,7 +91,7 @@ const LANG = {
     delimiter_label: "Delimiter",
     delimiter_colon: "Colon ( : )",
     delimiter_dash: "Dash ( - )",
-    delimiter_empty: "Empty",
+    delimiter_none: "None (   )",
     match_info_section: "Event Information",
     next_only: "Show only next/current event",
     hide_finished: "Hide finished events",
@@ -324,7 +324,7 @@ class CompactTeamTrackerEditor extends LitElement {
         <select class="custom-select" .value="${delimiter}" @change="${(e) => this._selectOption('score_delimiter', e.target.value)}">
         <option value=":" ?selected="${delimiter === ':'}">${t.delimiter_colon}</option>
         <option value="-" ?selected="${delimiter === '-'}">${t.delimiter_dash}</option>
-        <option value="-" ?selected="${delimiter === 'none'}">${t.delimiter_empty}</option>
+        <option value="none" ?selected="${delimiter === 'none'}">${t.delimiter_none}</option>
         </select>
         </div>
         </div>
@@ -590,7 +590,6 @@ class CompactTeamTracker extends LitElement {
     return LANG[l] || LANG['en'];
   }
 
-  // --- HILFSFUNKTION: SPRACHSPEZIFISCHE ZEITANGABE (in X Stunden/Tagen) ---
   _formatKickoffIn(dateStr, t) {
     if (!dateStr) return '';
     const kDate = new Date(dateStr);
@@ -615,7 +614,6 @@ class CompactTeamTracker extends LitElement {
     return '';
   }
 
-  // --- HILFSFUNKTION: DYNAMISCHE DATUMS- UND ZEITFORMATIERUNG ---
   _formatDateTime(dateStr, t) {
     if (!dateStr) return { timeStr: '--:--', fullDateStr: '', shortDateStr: '', formattedDateTime: '' };
 
@@ -728,7 +726,7 @@ class CompactTeamTracker extends LitElement {
 
     // Fallback: Wenn kein direktes Headshot vorhanden ist, aber eine ID existiert
     if (!headshot && id) {
-      let sportKey = "rpm"; // F1 / Motorsport verwendet bei ESPN das Kürzel 'rpm'
+      let sportKey = "rpm"; // Standard für F1 & Motorsport bei ESPN
       if (sport.includes("mma") || sport.includes("ufc")) sportKey = "mma";
       else if (sport.includes("tennis")) sportKey = "tennis";
       else if (sport.includes("golf")) sportKey = "golf";
@@ -963,7 +961,6 @@ class CompactTeamTracker extends LitElement {
     : this.renderMatch(stateObj, t, isInsideSlider);
   }
 
-  // --- STANDARD SPIELFREI / OFF-SEASON LAYOUT ---
   renderNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
@@ -1018,7 +1015,6 @@ class CompactTeamTracker extends LitElement {
         `;
   }
   
-  // --- ULTRA-COMPACT SPIELFREI LAYOUT ---
   renderUltraNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes;
     const s = entityObj.state;
@@ -1072,6 +1068,7 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
+    
     const rawDelim = this.config.score_delimiter || ':';
     const delim = rawDelim === 'none' ? ' ' : ` ${rawDelim} `;
 
@@ -1133,7 +1130,7 @@ class CompactTeamTracker extends LitElement {
             <div class="score-area">
             ${s === 'PRE'
               ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${kickoffInStr}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
-              : html`<div class="score-nums ${s === 'IN' ? 'live-score' : ''}">${sides.left.score !== undefined ? sides.left.score : 0} ${delim} ${sides.right.score !== undefined ? sides.right.score : 0}</div>`
+              : html`<div class="score-nums ${s === 'IN' ? 'live-score' : ''}">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</div>`
             }
             </div>
             <div class="team-box">
@@ -1167,8 +1164,10 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
+    
     const rawDelim = this.config.score_delimiter || ':';
     const delim = rawDelim === 'none' ? ' ' : rawDelim;
+    
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
     const { timeStr, shortDateStr } = this._formatDateTime(a.date, t);

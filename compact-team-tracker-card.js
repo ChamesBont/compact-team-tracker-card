@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.3-beta4 !!!");
+console.log("!!! TEAM TRACKER v2.1.3-beta5 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -901,33 +901,47 @@ class CompactTeamTracker extends LitElement {
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_name, a.team_abbr);
 
-    // Datum & Sprache ermitteln
+    // Locale für die System-Formatierung bestimmen
     const currentLang = this.hass?.language || 'de';
     const isDe = currentLang.startsWith('de');
     const locale = isDe ? 'de-DE' : 'en-US';
 
-    const kDate = a.date ? new Date(a.date) : null;
-    const timeStr = kDate ? kDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '';
-    const fullDateStr = kDate ? kDate.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-
-    // Relative Zeitangabe über Sprachobjekt (t)
+    let formattedDateTime = '';
     let relativeStr = '';
-    if (kDate) {
-      const now = new Date();
-      const diffMs = kDate.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-      if (diffDays === 1) {
-        relativeStr = t.tomorrow || 'morgen';
-      } else if (diffDays > 1) {
-        relativeStr = (t.in_days || 'in {days} Tagen').replace('{days}', diffDays);
+    if (a.date) {
+      const kDate = new Date(a.date);
+
+      if (!isNaN(kDate.getTime())) {
+        // 1. Datum & Uhrzeit nach System-Locale formatieren
+        const options = {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: !isDe
+        };
+
+        const dateTimeFormatter = new Intl.DateTimeFormat(locale, options);
+        let formatted = dateTimeFormatter.format(kDate).replace(',', ' •');
+
+        // Suffix (z. B. " Uhr") rein aus 't' laden
+        const clockSuffix = t.clock_suffix !== undefined ? t.clock_suffix : '';
+        formattedDateTime = `${formatted}${clockSuffix}`;
+
+        // 2. Relative Zeitangabe rein aus 't' laden
+        const now = new Date();
+        const diffMs = kDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+          relativeStr = t.tomorrow;
+        } else if (diffDays > 1) {
+          relativeStr = (t.in_days || '').replace('{days}', diffDays);
+        }
       }
     }
-
-    // Datumszeile zusammenbauen
-    const formattedDateTime = fullDateStr 
-      ? `${fullDateStr}${timeStr ? ` • ${timeStr}${isDe ? ' Uhr' : ''}` : ''}`
-      : '';
 
     return html`
     <div class="card-wrapper off-season-card" style="${customStyle}">

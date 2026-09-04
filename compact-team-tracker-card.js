@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta5 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta6 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -719,14 +719,16 @@ class CompactTeamTracker extends LitElement {
 
   _resolveAthleteData(a, isOpponent = false) {
     const prefix = isOpponent ? "opponent_" : "team_";
-    let headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || a.entity_picture || null;
-    const rawLogo = a[`${prefix}logo`] || null;
+    let headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
+    const rawLogo = a[`${prefix}logo`] || a.entity_picture || null;
     const id = a[`${prefix}id`] || a[`${prefix}athlete_id`] || a[`${prefix}player_id`] || a.athlete_id || a.player_id || null;
-    const sport = (a.sport || a.league || "mma").toLowerCase();
+    const sport = (a.sport || a.league || "").toLowerCase();
 
-    // Fallback: Wenn kein direktes Headshot vorhanden ist, aber eine ID existiert
-    if (!headshot && id) {
-      let sportKey = "rpm"; // Standard für F1 & Motorsport bei ESPN
+    // Nur bei echten Einzelsportarten nach Headshots suchen oder Fallbacks bauen
+    const isIndividualSport = sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("racing") || sport.includes("f1") || sport.includes("rpm") || !a.opponent_name;
+
+    if (!headshot && id && isIndividualSport) {
+      let sportKey = "rpm";
       if (sport.includes("mma") || sport.includes("ufc")) sportKey = "mma";
       else if (sport.includes("tennis")) sportKey = "tennis";
       else if (sport.includes("golf")) sportKey = "golf";
@@ -735,9 +737,9 @@ class CompactTeamTracker extends LitElement {
     }
 
     const flag = a[`${prefix}flag`] || a[`${prefix}country_flag`] || (headshot && rawLogo ? rawLogo : null);
-    const mainLogo = headshot || rawLogo;
+    const mainLogo = (isIndividualSport && headshot) ? headshot : (rawLogo || headshot);
     const name = this._cleanName(a[`${prefix}abbr`], a[`${prefix}name`]);
-    const isHeadshot = !!headshot;
+    const isHeadshot = isIndividualSport && !!headshot;
 
     return {
       mainLogo: mainLogo,
@@ -774,8 +776,8 @@ class CompactTeamTracker extends LitElement {
   _getMatchSides(a) {
     const sport = (a.sport || a.league || "").toLowerCase();
     const isRacingOrEvent = !a.opponent_name && !a.opponent_abbr && (a.position !== undefined || a.event_name);
-    const isIndividual = isRacingOrEvent || sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("boxing") || sport.includes("racing") || sport.includes("f1") || !!a.athlete_id || !!a.player_id || !!a.team_athlete_headshot;
-
+    const isIndividual = isRacingOrEvent || ((sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("boxing") || sport.includes("racing") || sport.includes("f1")) && (!!a.athlete_id || !!a.player_id || !!a.team_athlete_headshot));
+    
     if (isRacingOrEvent) {
       const athlete = this._resolveAthleteData(a, false);
       return {

@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.3-beta5 !!!");
+console.log("!!! TEAM TRACKER v2.1.3-beta6 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -51,7 +51,7 @@ const LANG = {
     show_sun: "Statistiken (S-U-N) anzeigen",
     live_details_section: "Live-Details",
     show_last_play: "Letzte Aktion anzeigen",
-    last_play_help: "Zeigt bei Live-Events eine Textzusammenfassung des letzten Aktionen an.",
+    last_play_help: "Zeigt bei Live-Events eine Textzusammenfassung der letzten Aktionen an.",
     last_play_marquee: "Lauftext für letzten Spielzug nutzen",
     no_entities: "Bitte füge in der Konfiguration Entitäten hinzu, um die Vorschau zu sehen.",
     bg_color: "Hintergrundfarbe:",
@@ -62,8 +62,12 @@ const LANG = {
     no_upcoming_games: 'Keine anstehenden Events',
     bye_week: "Frei",
     tomorrow: 'morgen',
+    in_less_than_hour: '< 1 Std.',
+    in_hour: 'in 1 Stunde',
+    in_hours: 'in {hours} Stunden',
     in_day: 'in 1 Tag',
     in_days: 'in {days} Tagen',
+    clock_suffix: ' Uhr',
     pos: "Pos."
   },
   en: {
@@ -106,8 +110,13 @@ const LANG = {
     no_upcoming_games: 'No Upcoming Events',
     bye_week: 'Bye Week',
     tomorrow: 'tomorrow',
+    in_less_than_hour: '< 1 hr',
+    in_hour: 'in 1 hour',
+    in_hours: 'in {hours} hours',
     in_day: 'in 1 day',
-    in_days: 'in {days} days'
+    in_days: 'in {days} days',
+    clock_suffix: '',
+    pos: "Pos."
   }
 };
 
@@ -578,6 +587,63 @@ class CompactTeamTracker extends LitElement {
     return LANG[l] || LANG['en'];
   }
 
+  // --- HILFSFUNKTION: SPRACHSPEZIFISCHE ZEITANGABE (in X Stunden/Tagen) ---
+  _formatKickoffIn(dateStr, t) {
+    if (!dateStr) return '';
+    const kDate = new Date(dateStr);
+    if (isNaN(kDate.getTime())) return '';
+
+    const now = new Date();
+    const diffMs = kDate.getTime() - now.getTime();
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffHours < 1 && diffHours >= 0) {
+      return t.in_less_than_hour || '< 1h';
+    } else if (diffHours < 24 && diffHours >= 1) {
+      return diffHours === 1 
+        ? (t.in_hour || 'in 1 hour') 
+        : (t.in_hours || 'in {hours} hours').replace('{hours}', diffHours);
+    } else if (diffDays === 1) {
+      return t.in_day || 'in 1 day';
+    } else if (diffDays > 1) {
+      return (t.in_days || 'in {days} days').replace('{days}', diffDays);
+    }
+    return '';
+  }
+
+  // --- HILFSFUNKTION: DYNAMISCHE DATUMS- UND ZEITFORMATIERUNG ---
+  _formatDateTime(dateStr, t) {
+    if (!dateStr) return { timeStr: '--:--', fullDateStr: '', shortDateStr: '', formattedDateTime: '' };
+
+    const kDate = new Date(dateStr);
+    if (isNaN(kDate.getTime())) return { timeStr: '--:--', fullDateStr: '', shortDateStr: '', formattedDateTime: '' };
+
+    const currentLang = this.hass?.language || 'de';
+    const isDe = currentLang.startsWith('de');
+    const locale = isDe ? 'de-DE' : 'en-US';
+
+    const options = {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !isDe
+    };
+
+    const dateTimeFormatter = new Intl.DateTimeFormat(locale, options);
+    let formatted = dateTimeFormatter.format(kDate).replace(',', ' •');
+    const clockSuffix = t.clock_suffix !== undefined ? t.clock_suffix : '';
+    const formattedDateTime = `${formatted}${clockSuffix}`;
+
+    const timeStr = kDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: !isDe });
+    const fullDateStr = kDate.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const shortDateStr = kDate.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+
+    return { timeStr, fullDateStr, shortDateStr, formattedDateTime };
+  }
+
   _prevSlide(max) {
     this._currentSlide = (this._currentSlide > 0) ? this._currentSlide - 1 : max - 1;
   }
@@ -901,47 +967,8 @@ class CompactTeamTracker extends LitElement {
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const teamName = this._cleanName(a.team_name, a.team_abbr);
 
-    // Locale für die System-Formatierung bestimmen
-    const currentLang = this.hass?.language || 'de';
-    const isDe = currentLang.startsWith('de');
-    const locale = isDe ? 'de-DE' : 'en-US';
-
-    let formattedDateTime = '';
-    let relativeStr = '';
-
-    if (a.date) {
-      const kDate = new Date(a.date);
-
-      if (!isNaN(kDate.getTime())) {
-        // 1. Datum & Uhrzeit nach System-Locale formatieren
-        const options = {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: !isDe
-        };
-
-        const dateTimeFormatter = new Intl.DateTimeFormat(locale, options);
-        let formatted = dateTimeFormatter.format(kDate).replace(',', ' •');
-
-        // Suffix (z. B. " Uhr") rein aus 't' laden
-        const clockSuffix = t.clock_suffix !== undefined ? t.clock_suffix : '';
-        formattedDateTime = `${formatted}${clockSuffix}`;
-
-        // 2. Relative Zeitangabe rein aus 't' laden
-        const now = new Date();
-        const diffMs = kDate.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 1) {
-          relativeStr = t.tomorrow;
-        } else if (diffDays > 1) {
-          relativeStr = (t.in_days || '').replace('{days}', diffDays);
-        }
-      }
-    }
+    const { formattedDateTime } = this._formatDateTime(a.date, t);
+    const relativeStr = this._formatKickoffIn(a.date, t);
 
     return html`
     <div class="card-wrapper off-season-card" style="${customStyle}">
@@ -1039,9 +1066,8 @@ class CompactTeamTracker extends LitElement {
     const sides = this._getMatchSides(a);
     const delim = this.config.score_delimiter || ':';
 
-    const kDate = a.date ? new Date(a.date) : null;
-    const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
-    const fullDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const { timeStr, fullDateStr } = this._formatDateTime(a.date, t);
+    const kickoffInStr = this._formatKickoffIn(a.date, t);
 
     const showLeague = this.config.show_league !== false;
     const showEventName = this.config.show_event_name !== false;
@@ -1085,7 +1111,7 @@ class CompactTeamTracker extends LitElement {
             </div>
             <div class="score-area">
             ${s === 'PRE'
-              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
+              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${kickoffInStr}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
               : html`<div class="racing-pos-box"><span class="racing-pos-label">${t.pos}</span><span class="score-nums ${s === 'IN' ? 'live-score' : ''}">${sides.team.pos || '-'}</span></div>`
             }
             </div>
@@ -1097,7 +1123,7 @@ class CompactTeamTracker extends LitElement {
             </div>
             <div class="score-area">
             ${s === 'PRE'
-              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${a.kickoff_in || ''}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
+              ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date">${kickoffInStr}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
               : html`<div class="score-nums ${s === 'IN' ? 'live-score' : ''}">${sides.left.score !== undefined ? sides.left.score : 0} ${delim} ${sides.right.score !== undefined ? sides.right.score : 0}</div>`
             }
             </div>
@@ -1135,9 +1161,7 @@ class CompactTeamTracker extends LitElement {
     const delim = this.config.score_delimiter || ':';
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
-    const kDate = a.date ? new Date(a.date) : null;
-    const timeStr = kDate ? kDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
-    const shortDateStr = kDate ? kDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' }) : '';
+    const { timeStr, shortDateStr } = this._formatDateTime(a.date, t);
 
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';

@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta10 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta11 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -987,6 +987,7 @@ class CompactTeamTracker extends LitElement {
     : this.renderMatch(stateObj, t, isInsideSlider);
   }
 
+  // --- STANDARD SPIELFREI / OFF-SEASON LAYOUT ---
   renderNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes || {};
     const s = entityObj.state;
@@ -995,35 +996,37 @@ class CompactTeamTracker extends LitElement {
     const showLeague = this.config.show_league !== false;
     const showEventName = this.config.show_event_name !== false;
 
-    // 1. Logo-Fallback-Kette speziell für ha-teamtracker
+    // Spezifische Abfrage aller Team Tracker Logo-Pfade
     const logoUrl = a.team_logo 
       || a.entity_picture 
-      || (a.athlete_headshot ? a.athlete_headshot : null)
+      || a.team_athlete_headshot 
+      || a.athlete_headshot 
       || this._resolveBestTeamLogo(entityObj);
 
-    // 2. Namens-Fallback (team_abbr -> team_name -> friendly_name)
-    let teamName = a.team_abbr || a.team_name;
-    if (!teamName || teamName === "-") {
-      teamName = entityObj.attributes.friendly_name 
-        ? entityObj.attributes.friendly_name.replace(/(teamtracker|tracker)/gi, '').trim() 
+    const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
+
+    // Namen-Fallback (team_name -> team_abbr -> friendly_name)
+    let teamName = a.team_name || a.team_abbr;
+    if (!teamName || teamName === "*" || teamName === "-") {
+      teamName = a.friendly_name 
+        ? a.friendly_name.replace(/(teamtracker|tracker)/gi, '').trim() 
         : "TBD";
     }
 
-    const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const { formattedDateTime } = this._formatDateTime(a.date, t);
     const relativeStr = this._formatKickoffIn(a.date, t);
 
     return html`
     <div class="card-wrapper off-season-card" style="${customStyle}">
-      ${showLeague ? html`
-        <div class="header-bg">
-          <div class="header">
-            <div class="league-box">
-              ${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}
-              <span>${a.league_name || a.league || ''}</span>
-            </div>
-          </div>
-        </div>
+    ${showLeague ? html`
+      <div class="header-bg">
+      <div class="header">
+      <div class="league-box">
+      ${a.league_logo ? html`<img src="${a.league_logo}" class="league-logo" @error="${e => e.target.style.display='none'}">` : ''}
+      <span>${a.league_name || a.league || ''}</span>
+      </div>
+      </div>
+      </div>
       ` : ''}
 
       ${showEventName && a.event_name && a.event_name !== (a.league_name || a.league) ? html`
@@ -1031,28 +1034,29 @@ class CompactTeamTracker extends LitElement {
       ` : ''}
 
       <div class="content no-match-content ${!showLeague && (!showEventName || !a.event_name) ? 'extra-padding' : ''}">
-        <div class="no-match-logo-wrap">
-          ${logoUrl ? html`
-            <img src="${logoUrl}" class="team-logo off-season-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`
-            <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>`}
+      <div class="no-match-logo-wrap">
+      ${logoUrl ? html`
+        <img src="${logoUrl}" class="team-logo off-season-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`
+        <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>`}
         </div>
         <div class="no-match-message">
-          <div class="no-match-team-name">${teamName}</div>
-          <div class="no-match-title">
-            ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
-            ${relativeStr ? html` <span style="font-weight: 400; opacity: 0.85;">(${relativeStr})</span>` : ''}
-          </div>
-          ${formattedDateTime ? html`
-            <div class="no-match-date" style="font-size: 11px; opacity: 0.75; margin-top: 3px; font-weight: 600;">
-              ${formattedDateTime}
-            </div>
-          ` : ''}
+        <div class="no-match-team-name">${teamName}</div>
+        <div class="no-match-title">
+          ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
+          ${relativeStr ? html` <span style="font-weight: 400; opacity: 0.85;">(${relativeStr})</span>` : ''}
         </div>
-      </div>
-    </div>
-    `;
+        ${formattedDateTime ? html`
+          <div class="no-match-date" style="font-size: 11px; opacity: 0.75; margin-top: 3px; font-weight: 600;">
+            ${formattedDateTime}
+          </div>
+        ` : ''}
+        </div>
+        </div>
+        </div>
+        `;
   }
   
+  // --- ULTRA-COMPACT SPIELFREI LAYOUT ---
   renderUltraNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes || {};
     const s = entityObj.state;
@@ -1061,32 +1065,33 @@ class CompactTeamTracker extends LitElement {
 
     const logoUrl = a.team_logo 
       || a.entity_picture 
-      || (a.athlete_headshot ? a.athlete_headshot : null)
+      || a.team_athlete_headshot 
+      || a.athlete_headshot 
       || this._resolveBestTeamLogo(entityObj);
-
-    let teamName = a.team_abbr || a.team_name;
-    if (!teamName || teamName === "-") {
-      teamName = entityObj.attributes.friendly_name 
-        ? entityObj.attributes.friendly_name.replace(/(teamtracker|tracker)/gi, '').trim() 
-        : "TBD";
-    }
 
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
+    let teamName = a.team_abbr || a.team_name;
+    if (!teamName || teamName === "*" || teamName === "-") {
+      teamName = a.friendly_name 
+        ? a.friendly_name.replace(/(teamtracker|tracker)/gi, '').trim() 
+        : "TBD";
+    }
+
     return html`
     <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
-      <div class="ultra-team left">
-        ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`<ha-icon icon="mdi:shield-outline" style="--mdc-icon-size: 20px; opacity: 0.6;"></ha-icon>`}
-        <span class="ultra-abbr">${teamName}</span>
-      </div>
-      <div class="ultra-info">
-        <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
-          ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
-        </span>
-      </div>
-      <div class="ultra-team right">
-        ${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" style="opacity: 0.7;" @error="${e => e.target.style.display='none'}">` : ''}
-      </div>
+    <div class="ultra-team left">
+    ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`<ha-icon icon="mdi:shield-outline" style="--mdc-icon-size: 20px; opacity: 0.6;"></ha-icon>`}
+    <span class="ultra-abbr">${teamName}</span>
+    </div>
+    <div class="ultra-info">
+    <span class="ultra-subtext" style="opacity: 0.95; font-size: 11px; font-weight: bold;">
+    ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
+    </span>
+    </div>
+    <div class="ultra-team right">
+    ${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" style="opacity: 0.7;" @error="${e => e.target.style.display='none'}">` : ''}
+    </div>
     </div>
     `;
   }

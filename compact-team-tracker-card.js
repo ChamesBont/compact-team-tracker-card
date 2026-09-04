@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4-beta8 !!!");
+console.log("!!! TEAM TRACKER v2.1.4-beta9 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -994,9 +994,12 @@ class CompactTeamTracker extends LitElement {
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const showLeague = this.config.show_league !== false;
     const showEventName = this.config.show_event_name !== false;
-    const logoUrl = this._resolveBestTeamLogo(entityObj);
+    
+    // Daten & Logo inkl. Fallbacks über _resolveAthleteData auflösen
+    const athleteData = this._resolveAthleteData(a, false);
+    const logoUrl = athleteData.mainLogo || entityObj.attributes.entity_picture || this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
-    const teamName = this._cleanName(a.team_name, a.team_abbr);
+    const teamName = athleteData.name !== "-" ? athleteData.name : this._cleanName(a.team_name, a.team_abbr);
 
     const { formattedDateTime } = this._formatDateTime(a.date, t);
     const relativeStr = this._formatKickoffIn(a.date, t);
@@ -1045,15 +1048,18 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
-    const customStyle = customBg ? `background-color: ${customBg};` : '';
-    const logoUrl = this._resolveBestTeamLogo(entityObj);
+    customStyle = customBg ? `background-color: ${customBg};` : '';
+
+    // Daten & Logo inkl. Fallbacks über _resolveAthleteData auflösen
+    const athleteData = this._resolveAthleteData(a, false);
+    const logoUrl = athleteData.mainLogo || entityObj.attributes.entity_picture || this._resolveBestTeamLogo(entityObj);
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
-    const teamName = this._cleanName(a.team_abbr, a.team_name);
+    const teamName = athleteData.name !== "-" ? athleteData.name : this._cleanName(a.team_abbr, a.team_name);
 
     return html`
     <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
     <div class="ultra-team left">
-    ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : ''}
+    ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`<ha-icon icon="mdi:shield-outline" style="--mdc-icon-size: 20px; opacity: 0.6;"></ha-icon>`}
     <span class="ultra-abbr">${teamName}</span>
     </div>
     <div class="ultra-info">

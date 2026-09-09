@@ -44,8 +44,9 @@ Multiple options for customization.
 * **Auto-Cleanup:** Automatically hide finished matches from previous days at midnight.
 * **Scoring Plays:** Optional list of scorers for live and finished matches, including timestamps.
 * **Custom background color:** Set your own background color for each Team.
-* **Score Delimiter Option:** Choose between colon (:) and dash (-) as the score separator.
+* **Score Delimiter Option:** Choose between colon (:), dash (-) or an empty space as the score separator.
 * **Home Team Position:** Display the home team on the Left (European standard) or Right (US style: Away @ Home).
+* **Custom Time & Date Formats:** Easily switch between 12-hour/24-hour time formats and standard date styles.
 * **Multi-Language:** Built-in support for **English** and **German** (auto-detected from Home Assistant settings).
 
 ---
@@ -85,11 +86,14 @@ Multiple options for customization.
 | `layout` | string | `standard` | Card layout style. Options: `standard` or `ultra`. |
 | `slider` | boolean | `false` | Enables carousel / slider view with swipe/navigation dots. |
 | `show_league` | boolean | `true` | Displays the league name and logo in the card header (standard mode). |
+| `show_event_name` | boolean | `true` | Displays the specific event name (e.g. tournament round or match title). |
 | `logo_shadow` | boolean | `false` | Highlights team logos and athlete portraits with a subtle glow/drop-shadow. |
 | `show_location` | boolean | `true` | Shows venue and match location in the card footer. |
 | `show_tv_network` | boolean | `true` | Displays broadcasting TV network or streaming channel in the footer. |
 | `home_team_position` | string | `left` | Alignment of the home team. Options: `left` (European standard) or `right` (US Away @ Home). |
-| `score_delimiter` | string | `:` | Separator symbol between scores. Options: `:` or `-`. |
+| `score_delimiter` | string | `:` | Separator symbol between scores. Options: `:`, `-`, or `none`. |
+| `time_format` | string | `24h` | Time display format. Options: `24h` (24-hour clock) or `12h` (12-hour AM/PM). |
+| `date_format` | string | `DD.MM.YYYY` | Date display format. Options: `DD.MM.YYYY`, `DD/MM/YYYY`, or `MM/DD/YYYY`. |
 | `show_next_only` | boolean | `false` | Displays only the next chronologically upcoming match (ignored when `slider: true`). |
 | `only_today` | boolean | `false` | Hides finished games (`POST`) from previous days at midnight. |
 | `hide_offseason` | boolean | `false` | Hides teams currently in off-season, bye weeks, or without scheduled matches (`NOT_FOUND` / `BYE`). |

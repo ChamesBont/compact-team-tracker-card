@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.4 !!!");
+console.log("!!! TEAM TRACKER v2.1.5 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -43,6 +43,10 @@ const LANG = {
     delimiter_colon: "Doppelpunkt ( : )",
     delimiter_dash: "Bindestrich ( - )",
     delimiter_none: "Keines (   )",
+    time_format_label: "Darstellung der Uhrzeit",
+    time_format_12h: "12-Stunden (12h AM/PM)",
+    time_format_24h: "24-Stunden (24H)",
+    date_format_label: "Darstellung des Datums",
     match_info_section: "Event-Informationen",
     next_only: "Nur das nächste/aktuelle Event anzeigen",
     hide_finished: "Beendete Events ausblenden",
@@ -92,6 +96,10 @@ const LANG = {
     delimiter_colon: "Colon ( : )",
     delimiter_dash: "Dash ( - )",
     delimiter_none: "None (   )",
+    time_format_label: "Time Format",
+    time_format_12h: "12-Hour (12h AM/PM)",
+    time_format_24h: "24-Hour (24H)",
+    date_format_label: "Date Format",
     match_info_section: "Event Information",
     next_only: "Show only next/current event",
     hide_finished: "Hide finished events",
@@ -176,6 +184,8 @@ class CompactTeamTrackerEditor extends LitElement {
     const colors = this._config.team_colors || {};
     const homePos = this._config.home_team_position || 'left';
     const delimiter = this._config.score_delimiter || ':';
+    const timeFormat = this._config.time_format || '24h';
+    const dateFormat = this._config.date_format || 'DD.MM.YYYY';
 
     return html`
     <div class="card-config">
@@ -325,6 +335,23 @@ class CompactTeamTrackerEditor extends LitElement {
         <option value=":" ?selected="${delimiter === ':'}">${t.delimiter_colon}</option>
         <option value="-" ?selected="${delimiter === '-'}">${t.delimiter_dash}</option>
         <option value="none" ?selected="${delimiter === 'none'}">${t.delimiter_none}</option>
+        </select>
+        </div>
+
+        <div class="select-row">
+        <label class="select-label">${t.time_format_label}</label>
+        <select class="custom-select" .value="${timeFormat}" @change="${(e) => this._selectOption('time_format', e.target.value)}">
+        <option value="24h" ?selected="${timeFormat === '24h'}">${t.time_format_24h}</option>
+        <option value="12h" ?selected="${timeFormat === '12h'}">${t.time_format_12h}</option>
+        </select>
+        </div>
+
+        <div class="select-row">
+        <label class="select-label">${t.date_format_label}</label>
+        <select class="custom-select" .value="${dateFormat}" @change="${(e) => this._selectOption('date_format', e.target.value)}">
+        <option value="DD.MM.YYYY" ?selected="${dateFormat === 'DD.MM.YYYY'}">DD.MM.YYYY</option>
+        <option value="DD/MM/YYYY" ?selected="${dateFormat === 'DD/MM/YYYY'}">DD/MM/YYYY</option>
+        <option value="MM/DD/YYYY" ?selected="${dateFormat === 'MM/DD/YYYY'}">MM/DD/YYYY</option>
         </select>
         </div>
         </div>
@@ -583,7 +610,7 @@ class CompactTeamTracker extends LitElement {
   }
 
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", logo_shadow: false, show_location: true, show_tv_network: true }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
@@ -620,27 +647,40 @@ class CompactTeamTracker extends LitElement {
     const kDate = new Date(dateStr);
     if (isNaN(kDate.getTime())) return { timeStr: '--:--', fullDateStr: '', shortDateStr: '', formattedDateTime: '' };
 
-    const currentLang = this.hass?.language || 'de';
-    const isDe = currentLang.startsWith('de');
-    const locale = isDe ? 'de-DE' : 'en-US';
+    const is12h = this.config.time_format === '12h';
+    const dateFormat = this.config.date_format || 'DD.MM.YYYY';
 
-    const options = {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: !isDe
-    };
+    const day = String(kDate.getDate()).padStart(2, '0');
+    const month = String(kDate.getMonth() + 1).padStart(2, '0');
+    const year = kDate.getFullYear();
 
-    const dateTimeFormatter = new Intl.DateTimeFormat(locale, options);
-    let formatted = dateTimeFormatter.format(kDate).replace(',', ' •');
-    const clockSuffix = t.clock_suffix !== undefined ? t.clock_suffix : '';
-    const formattedDateTime = `${formatted}${clockSuffix}`;
+    let fullDateStr = `${day}.${month}.${year}`;
+    let shortDateStr = `${day}.${month}`;
 
-    const timeStr = kDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: !isDe });
-    const fullDateStr = kDate.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const shortDateStr = kDate.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+    if (dateFormat === 'DD/MM/YYYY') {
+      fullDateStr = `${day}/${month}/${year}`;
+      shortDateStr = `${day}/${month}`;
+    } else if (dateFormat === 'MM/DD/YYYY') {
+      fullDateStr = `${month}/${day}/${year}`;
+      shortDateStr = `${month}/${day}`;
+    }
+
+    let timeStr = '';
+    if (is12h) {
+      let hours = kDate.getHours();
+      const minutes = String(kDate.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      timeStr = `${hours}:${minutes} ${ampm}`;
+    } else {
+      const hours = String(kDate.getHours()).padStart(2, '0');
+      const minutes = String(kDate.getMinutes()).padStart(2, '0');
+      timeStr = `${hours}:${minutes}`;
+    }
+
+    const clockSuffix = (!is12h && t.clock_suffix !== undefined) ? t.clock_suffix : '';
+    const formattedDateTime = `${fullDateStr} • ${timeStr}${clockSuffix}`;
 
     return { timeStr, fullDateStr, shortDateStr, formattedDateTime };
   }

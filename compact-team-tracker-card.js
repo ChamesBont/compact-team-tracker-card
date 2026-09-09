@@ -1314,7 +1314,7 @@ class CompactTeamTracker extends LitElement {
     .header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: bold; min-height: 20px; }
     .header.no-league { justify-content: center; }
     .league-box { display: flex; align-items: center; }
-    .league-logo { width: 18px; height: 18px; object-fit: contain; margin-right: 6px; }
+    .league-logo { width: 18px; height: 18px; object-fit: contain; margin-right: 6px; filter: drop-shadow(0px 0px 0px rgba(255, 255, 255, 1)); }
     .live-status { color: #e74c3c; display: flex; align-items: center; }
     .status-post { opacity: 0.7; }
     .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }

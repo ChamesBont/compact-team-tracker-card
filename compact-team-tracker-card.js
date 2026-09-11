@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.2.0-beta2 !!!");
+console.log("!!! TEAM TRACKER v2.2.0-beta3 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -803,11 +803,14 @@ class CompactTeamTracker extends LitElement {
 
   _handleTouchStart(e) {
     this._touchStartX = e.changedTouches[0].screenX;
+    this._isPaused = true;
+    this.requestUpdate();
   }
 
   _handleTouchEnd(e, max) {
     this._touchEndX = e.changedTouches[0].screenX;
     const diff = this._touchStartX - this._touchEndX;
+    
     if (Math.abs(diff) > 40) {
       if (diff > 0) {
         this._nextSlide(max);
@@ -815,6 +818,15 @@ class CompactTeamTracker extends LitElement {
         this._prevSlide(max);
       }
     }
+    
+    this._isPaused = false;
+    this.requestUpdate();
+  }
+
+  // Tap-Toggle für Mobilgeräte (Freeze beim Anstupsen)
+  _togglePause() {
+    this._isPaused = !this._isPaused;
+    this.requestUpdate();
   }
 
   _resolveBackgroundColor(stateObj) {
@@ -1085,12 +1097,13 @@ class CompactTeamTracker extends LitElement {
       return html`
       <ha-card
       class="slider-card"
-      @mouseenter="${() => this.shadowRoot.querySelector('.slider-track')?.classList.add('paused')}"
-      @mouseleave="${() => this.shadowRoot.querySelector('.slider-track')?.classList.remove('paused')}"
-      @touchstart="${(e) => { this._handleTouchStart(e); this.shadowRoot.querySelector('.slider-track')?.classList.add('paused'); }}"
-      @touchend="${(e) => { this._handleTouchEnd(e, displayList.length); this.shadowRoot.querySelector('.slider-track')?.classList.remove('paused'); }}">
+      @mouseenter="${() => { this._isPaused = true; this.requestUpdate(); }}"
+      @mouseleave="${() => { this._isPaused = false; this.requestUpdate(); }}"
+      @click="${this._togglePause}"
+      @touchstart="${(e) => this._handleTouchStart(e)}"
+      @touchend="${(e) => this._handleTouchEnd(e, displayList.length)}">
 
-      <div class="slider-track" style="transform: translateX(-${this._currentSlide * 100}%);">
+      <div class="slider-track ${this._isPaused ? 'paused' : ''}" style="transform: translateX(-${this._currentSlide * 100}%);">
       ${displayList.map(stateObj => {
         const slideBg = this._resolveBackgroundColor(stateObj);
         const slideStyle = slideBg ? `background-color: ${slideBg};` : '';
@@ -1104,7 +1117,7 @@ class CompactTeamTracker extends LitElement {
       })}
       </div>
 
-      <div class="slider-nav">
+      <div class="slider-nav" @click="${(e) => e.stopPropagation()}">
       <button class="nav-arrow left" @click="${() => this._prevSlide(displayList.length)}">&#10094;</button>
       <div class="slider-dots">
       ${displayList.map((_, idx) => html`

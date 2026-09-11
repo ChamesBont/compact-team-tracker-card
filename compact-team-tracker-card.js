@@ -1436,7 +1436,7 @@ class CompactTeamTracker extends LitElement {
 
     /* VISUAL SCORE ALERT ANIMATIONS (PULSIERENDER TOR-TEXT) */
     .score-alert-active {
-      animation: scoreTextFlash 0.8s infinite alternate !important;
+      animation: scoreTextFlash 0.5s infinite alternate !important;
       display: inline-block;
     }
 

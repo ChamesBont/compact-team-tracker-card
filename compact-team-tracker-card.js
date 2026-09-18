@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.6 !!!");
+console.log("!!! TEAM TRACKER v2.1.7-beta1 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -70,6 +70,7 @@ const LANG = {
     show_last_play: "Letzte Aktion anzeigen",
     last_play_help: "Zeigt bei Live-Events eine Textzusammenfassung der letzten Aktionen an.",
     last_play_marquee: "Lauftext für letzten Spielzug nutzen",
+    hide_scores_label: "Ergebnis zensieren (Spoiler-Schutz)",
     no_entities: "Bitte füge in der Konfiguration Entitäten hinzu, um die Vorschau zu sehen.",
     bg_color: "Hintergrundfarbe:",
     reset: "Zurücksetzen",
@@ -125,6 +126,7 @@ const LANG = {
     show_last_play: "Show last action",
     last_play_help: "Displays a text summary of the most recent actions during live events.",
     last_play_marquee: "Use marquee for last play",
+    hide_scores_label: "Blur score (Spoiler protection)",
     no_entities: "Please add entities in the configuration to see the preview.",
     bg_color: "Background color:",
     reset: "Reset",
@@ -166,6 +168,7 @@ class CompactTeamTrackerEditor extends LitElement {
     this._config = JSON.parse(JSON.stringify(config));
     if (!this._config.entities) this._config.entities = this._config.entity ? [this._config.entity] : [];
     if (!this._config.team_colors) this._config.team_colors = {};
+    if (!this._config.hide_scores) this._config.hide_scores = {};
   }
 
   get _lang() {
@@ -196,6 +199,7 @@ class CompactTeamTrackerEditor extends LitElement {
     const isShowLastPlayDisabled = isUltra;
     const isMarqueeDisabled = isUltra || this._config.show_last_play === false;
     const colors = this._config.team_colors || {};
+    const hideScores = this._config.hide_scores || {};
     const homePos = this._config.home_team_position || 'left';
     const delimiter = this._config.score_delimiter || ':';
     const timeFormat = this._config.time_format || '24h';
@@ -246,6 +250,14 @@ class CompactTeamTrackerEditor extends LitElement {
         </button>
         ` : ''}
         </div>
+        </div>
+
+        <div class="switch-row" style="margin-top: 6px; margin-bottom: 0;">
+          <span style="font-size: 12px; color: var(--secondary-text-color);">${t.hide_scores_label}</span>
+          <ha-switch
+            .checked="${hideScores[ent] === true}"
+            @change="${(ev) => this._hideScoreChanged(ent, ev.target.checked)}">
+          </ha-switch>
         </div>
         </div>
         `)}
@@ -465,7 +477,13 @@ class CompactTeamTrackerEditor extends LitElement {
       delete teamColors[oldEnt];
     }
 
-    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors });
+    const hideScores = { ...(this._config.hide_scores || {}) };
+    if (oldEnt && hideScores[oldEnt] !== undefined && oldEnt !== ev.detail.value) {
+      hideScores[ev.detail.value] = hideScores[oldEnt];
+      delete hideScores[oldEnt];
+    }
+
+    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors, hide_scores: hideScores });
   }
 
   _colorChanged(entityId, colorHex) {
@@ -478,6 +496,18 @@ class CompactTeamTrackerEditor extends LitElement {
       delete teamColors[entityId];
     }
     this._updateConfig({ ...this._config, team_colors: teamColors });
+  }
+
+  _hideScoreChanged(entityId, isChecked) {
+    triggerHaptic(this);
+    if (!entityId) return;
+    const hideScores = { ...(this._config.hide_scores || {}) };
+    if (isChecked) {
+      hideScores[entityId] = true;
+    } else {
+      delete hideScores[entityId];
+    }
+    this._updateConfig({ ...this._config, hide_scores: hideScores });
   }
 
   _resetColor(entityId) {
@@ -501,8 +531,12 @@ class CompactTeamTrackerEditor extends LitElement {
     const entToRemove = this._config.entities[idx];
     const newEntities = this._config.entities.filter((_, i) => i !== idx);
     const teamColors = { ...(this._config.team_colors || {}) };
-    if (entToRemove) delete teamColors[entToRemove];
-    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors });
+    const hideScores = { ...(this._config.hide_scores || {}) };
+    if (entToRemove) {
+      delete teamColors[entToRemove];
+      delete hideScores[entToRemove];
+    }
+    this._updateConfig({ ...this._config, entities: newEntities, team_colors: teamColors, hide_scores: hideScores });
   }
 
   _prioChanged(ev) { triggerHaptic(this); this._updateConfig({ ...this._config, priority_entity: ev.detail.value }); }
@@ -625,7 +659,8 @@ class CompactTeamTracker extends LitElement {
       _currentSlide: { type: Number },
       _now: { type: Object },
       _activeAlerts: { type: Object },
-      _isPaused: { type: Boolean }
+      _isPaused: { type: Boolean },
+      _pausedMarquees: { type: Object }
     };
   }
 
@@ -640,6 +675,7 @@ class CompactTeamTracker extends LitElement {
     this._activeAlerts = {};
     this._alertTimeouts = {};
     this._isPaused = false;
+    this._pausedMarquees = {};
   }
 
   connectedCallback() {
@@ -701,7 +737,7 @@ class CompactTeamTracker extends LitElement {
   }
 
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true, enable_score_alerts: false }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, hide_scores: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true, enable_score_alerts: false }; }
 
   get _lang() {
     const l = this.hass?.language || 'de';
@@ -771,7 +807,7 @@ class CompactTeamTracker extends LitElement {
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
       hours = hours ? hours : 12;
-      timeStr = `${hours}:${minutes} ${ampm}`;
+      timeStr = `${hours}:${minutes}${ampm}`;
     } else {
       const hours = String(kDate.getHours()).padStart(2, '0');
       const minutes = String(kDate.getMinutes()).padStart(2, '0');
@@ -822,6 +858,16 @@ class CompactTeamTracker extends LitElement {
   _togglePause() {
     this._isPaused = !this._isPaused;
     this.requestUpdate();
+  }
+
+  _pauseMarquee(entId) {
+    this._pausedMarquees = { ...this._pausedMarquees, [entId]: true };
+  }
+
+  _resumeMarquee(entId) {
+    const updated = { ...this._pausedMarquees };
+    delete updated[entId];
+    this._pausedMarquees = updated;
   }
 
   _resolveBackgroundColor(stateObj) {
@@ -1132,8 +1178,7 @@ class CompactTeamTracker extends LitElement {
     <ha-card>
     <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
     ${displayList.map((stateObj, index) => html`
-      ${this.renderCardContent(stateObj, t, false)}
-      ${index < displayList.length - 1 ? html`<div class="spacer"></div>` : ''}
+      ${this.renderCardContent(stateObj, t, false)}${index < displayList.length - 1 ? html`<div class="spacer"></div>` : ''}
       `)}
       </div>
       </ha-card>
@@ -1291,6 +1336,7 @@ class CompactTeamTracker extends LitElement {
     const marqueeEnabled = this.config.last_play_marquee === true;
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
     const hasScoreAlert = this._activeAlerts[entityObj.entity_id] === true;
+    const isBlurred = (this.config.hide_scores || {})[entityObj.entity_id] === true;
 
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
@@ -1299,6 +1345,8 @@ class CompactTeamTracker extends LitElement {
     const hasTv = showTv && (a.tv_network || a.broadcast);
     const hasLastPlay = showLastPlay && s === 'IN' && a.last_play;
     const hasFooterContent = hasLocation || hasTv || hasLastPlay;
+    const entId = entityObj.entity_id;
+    const isMarqueePaused = this._pausedMarquees[entId] === true;
 
     return html`
     <div class="card-wrapper" style="${customStyle}">
@@ -1321,31 +1369,28 @@ class CompactTeamTracker extends LitElement {
           ${sides.isRacing ? html`
             <div class="team-box single-side">
             ${this._renderLogoBox(sides.team, shadowClass, false)}
-            <div class="name">${sides.team.name}</div>
-            ${sides.team.rec ? html`<div class="record">${sides.team.rec}</div>` : ''}
+            <div class="name">${sides.team.name}</div>${sides.team.rec ? html`<div class="record">${sides.team.rec}</div>` : ''}
             </div>
             <div class="score-area">
             ${s === 'PRE'
               ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.str}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
-              : html`<div class="racing-pos-box"><span class="racing-pos-label">${t.pos}</span><span class="score-nums ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''}">${sides.team.pos || '-'}</span></div>`
+              : html`<div class="racing-pos-box ${isBlurred ? 'spoiler-blur' : ''}"><span class="racing-pos-label">${t.pos}</span><span class="score-nums ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''}">${sides.team.pos || '-'}</span></div>`
             }
             </div>
             ` : html`
             <div class="team-box">
             ${this._renderLogoBox(sides.left, shadowClass, false)}
-            <div class="name">${sides.left.name}</div>
-            ${this.config.show_record && sides.left.rec ? html`<div class="record">${sides.left.rec}</div>` : ''}
+            <div class="name">${sides.left.name}</div>${this.config.show_record && sides.left.rec ? html`<div class="record">${sides.left.rec}</div>` : ''}
             </div>
             <div class="score-area">
             ${s === 'PRE'
               ? html`<div class="kickoff-wrapper"><div class="kickoff-time">${timeStr}</div><div class="kickoff-date ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.str}</div>${fullDateStr ? html`<div class="kickoff-exact">(${fullDateStr})</div>` : ''}</div>`
-              : html`<div class="score-nums ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''}">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</div>`
+              : html`<div class="score-nums ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''} ${isBlurred ? 'spoiler-blur' : ''}">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</div>`
             }
             </div>
             <div class="team-box">
             ${this._renderLogoBox(sides.right, shadowClass, false)}
-            <div class="name">${sides.right.name}</div>
-            ${this.config.show_record && sides.right.rec ? html`<div class="record">${sides.right.rec}</div>` : ''}
+            <div class="name">${sides.right.name}</div>${this.config.show_record && sides.right.rec ? html`<div class="record">${sides.right.rec}</div>` : ''}
             </div>
             `}
             </div>
@@ -1359,7 +1404,11 @@ class CompactTeamTracker extends LitElement {
                   <div class="tv-network"><ha-icon icon="mdi:television" class="tv-icon"></ha-icon>${a.tv_network || a.broadcast}</div>
                   ` : ''}
                   ${hasLastPlay ? html`
-                    <div class="play-container ${marqueeEnabled ? 'marquee' : 'multiline'}">
+                    <div class="play-container ${marqueeEnabled ? 'marquee' : 'multiline'} ${isMarqueePaused ? 'paused' : ''}"
+                         @mouseenter="${() => this._pauseMarquee(entId)}"
+                         @mouseleave="${() => this._resumeMarquee(entId)}"
+                         @touchstart="${() => this._pauseMarquee(entId)}"
+                         @touchend="${() => this._resumeMarquee(entId)}">
                     <div class="play">${a.last_play}</div>
                     </div>
                     ` : ''}
@@ -1385,6 +1434,7 @@ class CompactTeamTracker extends LitElement {
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
     const hasScoreAlert = this._activeAlerts[entityObj.entity_id] === true;
+    const isBlurred = (this.config.hide_scores || {})[entityObj.entity_id] === true;
 
     return html`
     <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
@@ -1396,7 +1446,7 @@ class CompactTeamTracker extends LitElement {
       <div class="ultra-info">
       ${s === 'PRE'
         ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.isLiveTimer ? kickoffInfo.str : timeStr}</span>`
-        : html`<span class="ultra-score ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''}">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
+        : html`<span class="ultra-score ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''} ${isBlurred ? 'spoiler-blur' : ''}">${t.pos} ${sides.team.pos || '-'}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
       }
       </div>
       <div class="ultra-team right">${a.league_logo ? html`<img src="${a.league_logo}" class="ultra-logo" @error="${e => e.target.style.display='none'}">` : ''}</div>
@@ -1408,12 +1458,11 @@ class CompactTeamTracker extends LitElement {
       <div class="ultra-info">
       ${s === 'PRE'
         ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.isLiveTimer ? kickoffInfo.str : timeStr}</span>`
-        : html`<span class="ultra-score ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''}">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
+        : html`<span class="ultra-score ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''} ${isBlurred ? 'spoiler-blur' : ''}">${sides.left.score !== undefined ? sides.left.score : 0}${delim}${sides.right.score !== undefined ? sides.right.score : 0}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
       }
       </div>
       <div class="ultra-team right">
-      <span class="ultra-abbr">${sides.right.name}</span>
-      ${this._renderLogoBox(sides.right, shadowClass, true)}
+      <span class="ultra-abbr">${sides.right.name}</span>${this._renderLogoBox(sides.right, shadowClass, true)}
       </div>
       `}
       </div>
@@ -1434,7 +1483,21 @@ class CompactTeamTracker extends LitElement {
     .status-post { opacity: 0.7; }
     .dot { height: 6px; width: 6px; background-color: #e74c3c; border-radius: 50%; display: inline-block; margin-right: 4px; animation: blink 1.5s infinite; }
 
-    /* VISUAL SCORE ALERT ANIMATIONS (PULSIERENDER TOR-TEXT) */
+    /* SPOILER SCHUTZ (BLUR) */
+    .spoiler-blur {
+      filter: blur(6px);
+      transition: filter 0.25s ease, opacity 0.25s ease;
+      cursor: pointer;
+      user-select: none;
+      opacity: 0.8;
+    }
+    .spoiler-blur:hover,
+    .spoiler-blur:active {
+      filter: blur(0px) !important;
+      opacity: 1 !important;
+    }
+
+    /* VISUAL SCORE ALERT ANIMATIONS */
     .score-alert-active {
       animation: scoreTextFlash 0.5s infinite alternate !important;
       display: inline-block;
@@ -1622,8 +1685,10 @@ class CompactTeamTracker extends LitElement {
     .play-container.multiline { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
     
-    /* PAUSE STATE FOR SLIDER CONTINUITY */
-    .slider-track.paused .play { animation-play-state: paused !important; }
+    /* PAUSE STATE FOR SLIDER AND INDIVIDUAL MARQUEE */
+    .slider-track.paused .play,
+    .play-container.paused .play { animation-play-state: paused !important; }
+    
     .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }
     
     @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }

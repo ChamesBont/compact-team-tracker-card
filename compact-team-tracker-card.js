@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.7-beta4 !!!");
+console.log("!!! TEAM TRACKER v2.1.7-beta5 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -815,7 +815,6 @@ class CompactTeamTracker extends LitElement {
         this._prevSlide(max);
       }
     }
-    this._isPaused = false;
     this.requestUpdate();
   }
 
@@ -1301,10 +1300,7 @@ class CompactTeamTracker extends LitElement {
 
     return html`
     <div class="card-wrapper ${this._isPaused ? 'paused' : ''}" style="${customStyle}"
-      @mouseenter="${() => { this._isPaused = true; this.requestUpdate(); }}"
-      @mouseleave="${() => { this._isPaused = false; this.requestUpdate(); }}"
-      @touchstart="${() => { this._isPaused = true; this.requestUpdate(); }}"
-      @touchend="${() => { this._isPaused = false; this.requestUpdate(); }}">
+      @click="${this._togglePause}">
     ${showLeague || s === 'IN' ? html`
       <div class="header-bg">
       <div class="header ${!showLeague ? 'no-league' : ''}">
@@ -1622,8 +1618,11 @@ class CompactTeamTracker extends LitElement {
     .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
     
     /* PAUSE STATE FOR SLIDER CONTINUITY & CARDS */
-    .card-wrapper:hover .play,
-    .card-wrapper:active .play,
+    @media (hover: hover) {
+      .card-wrapper:hover .play {
+        animation-play-state: paused;
+      }
+    }
     .card-wrapper.paused .play,
     .slider-track.paused .play { animation-play-state: paused !important; }
     .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }

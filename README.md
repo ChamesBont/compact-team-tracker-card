@@ -50,7 +50,7 @@ Multiple options for customization.
 * **Live Final-Hour Countdown:** Dynamic countdown timer (MM:SS) for games starting in less than 60 minutes.
 * **Visual Score Alerts:** Option for score/goal notifications. Score dynamically flashes for 5 seconds whenever a score change occurs during LIVE matches.
 * **Native Haptic Feedback:** Native mobile haptic feedback support for UI interactions such as sliding, arrow/dot clicks, and editor actions.
-* **Auto-Slide Pause on Hover/Touch:** The automated last play text slider immediately pauses on mousover / touch and resumes smoothly upon mouseleave / touch until vibration. On mobile: Tap the scrolling text to pause it. Hold it down until you feel a brief vibration, and the text will resume scrolling.
+* **Auto-Slide Pause on Hover/Touch:** The automated last play text slider immediately pauses on mousover / touch and resumes smoothly upon mouseleave / touch again.
 * **Multi-Language:** Built-in support for **English** and **German** (auto-detected from Home Assistant settings).
 
 ---

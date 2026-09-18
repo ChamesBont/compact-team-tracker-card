@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.7-beta !!!");
+console.log("!!! TEAM TRACKER v2.1.7-beta4 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -1129,11 +1129,7 @@ class CompactTeamTracker extends LitElement {
     }
 
     return html`
-    <ha-card
-      @mouseenter="${() => { this._isPaused = true; this.requestUpdate(); }}"
-      @mouseleave="${() => { this._isPaused = false; this.requestUpdate(); }}"
-      @touchstart="${() => { this._isPaused = true; this.requestUpdate(); }}"
-      @touchend="${() => { this._isPaused = false; this.requestUpdate(); }}">
+    <ha-card>
     <div class="${this.config.layout === 'ultra' ? 'ultra-mode' : ''}">
     ${displayList.map((stateObj, index) => html`
       ${this.renderCardContent(stateObj, t, false)}${index < displayList.length - 1 ? html`<div class="spacer"></div>` : ''}
@@ -1180,7 +1176,7 @@ class CompactTeamTracker extends LitElement {
     const kickoffInfo = this._formatKickoffIn(a.date, t);
 
     return html`
-    <div class="card-wrapper off-season-card ${this._isPaused ? 'paused' : ''}" style="${customStyle}">
+    <div class="card-wrapper off-season-card" style="${customStyle}">
     ${showLeague ? html`
       <div class="header-bg">
       <div class="header">
@@ -1236,7 +1232,7 @@ class CompactTeamTracker extends LitElement {
     const teamName = this._cleanName(a.team_abbr, a.team_name, a.friendly_name);
 
     return html`
-    <div class="ultra-wrapper ultra-off-season ${this._isPaused ? 'paused' : ''}" style="${customStyle}">
+    <div class="ultra-wrapper ultra-off-season" style="${customStyle}">
     <div class="ultra-team left">
     ${logoUrl ? html`<img src="${logoUrl}" class="ultra-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`<ha-icon icon="mdi:shield-outline" style="--mdc-icon-size: 20px; opacity: 0.6;"></ha-icon>`}
     <span class="ultra-abbr">${teamName}</span>
@@ -1304,7 +1300,11 @@ class CompactTeamTracker extends LitElement {
     const hasFooterContent = hasLocation || hasTv || hasLastPlay;
 
     return html`
-    <div class="card-wrapper ${this._isPaused ? 'paused' : ''}" style="${customStyle}">
+    <div class="card-wrapper ${this._isPaused ? 'paused' : ''}" style="${customStyle}"
+      @mouseenter="${() => { this._isPaused = true; this.requestUpdate(); }}"
+      @mouseleave="${() => { this._isPaused = false; this.requestUpdate(); }}"
+      @touchstart="${() => { this._isPaused = true; this.requestUpdate(); }}"
+      @touchend="${() => { this._isPaused = false; this.requestUpdate(); }}">
     ${showLeague || s === 'IN' ? html`
       <div class="header-bg">
       <div class="header ${!showLeague ? 'no-league' : ''}">
@@ -1387,7 +1387,7 @@ class CompactTeamTracker extends LitElement {
     const hasScoreAlert = this._activeAlerts[entityObj.entity_id] === true;
 
     return html`
-    <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''} ${this._isPaused ? 'paused' : ''}" style="${customStyle}">
+    <div class="ultra-wrapper ${s === 'IN' ? 'live-border' : ''}" style="${customStyle}">
     ${sides.isRacing ? html`
       <div class="ultra-team left">
       ${this._renderLogoBox(sides.team, shadowClass, true)}
@@ -1621,14 +1621,11 @@ class CompactTeamTracker extends LitElement {
     .play-container.multiline { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
     
-    /* PAUSE STATE FOR MARQUEE ON HOVER / TOUCH / PAUSED STATE */
-    ha-card:hover .play,
-    ha-card:touch .play,
+    /* PAUSE STATE FOR SLIDER CONTINUITY & CARDS */
+    .card-wrapper:hover .play,
+    .card-wrapper:active .play,
     .card-wrapper.paused .play,
-    .ultra-wrapper.paused .play,
-    .slider-track.paused .play { 
-      animation-play-state: paused !important; 
-    }
+    .slider-track.paused .play { animation-play-state: paused !important; }
     .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }
     
     @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }

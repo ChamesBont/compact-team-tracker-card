@@ -51,6 +51,8 @@ Multiple options for customization.
 * **Visual Score Alerts:** Option for score/goal notifications. Score dynamically flashes for 5 seconds whenever a score change occurs during LIVE matches.
 * **Native Haptic Feedback:** Native mobile haptic feedback support for UI interactions such as sliding, arrow/dot clicks, and editor actions.
 * **Auto-Slide Pause on Hover/Touch:** The automated last play text slider immediately pauses on mousover / touch and resumes smoothly upon mouseleave / touch again.
+* **Spoiler Protection:** Each entity now has its own "Spoiler Protection" (Hide Result) option. Result Obfuscation: When this option is enabled, a fake score (0:0 or position 0) is rendered both during the game and after the game instead of the actual score, and is also heavily blurred. This makes it impossible to guess either the score or the number of digits.
+Disable option: As soon as the toggle is turned off, the display immediately reverts to the actual score without the blur effect.
 * **Multi-Language:** Built-in support for **English** and **German** (auto-detected from Home Assistant settings).
 
 ---
@@ -106,6 +108,7 @@ Multiple options for customization.
 | `last_play_marquee` | boolean | `false` | Enables smooth scrolling ticker animation for the last play text. |
 | `priority_entity` | string | *optional* | Primary team sensor ID. Prioritized for simultaneous kickoffs and card background coloring. |
 | `team_colors` | map | *optional* | Custom HEX background colors mapped per entity (e.g. `sensor.team_tracker: "#1c1c1e"`). |
+| `blurred_entities` |  list | *optional* | List of entity IDs to apply a backdrop blur / blurred effect to. |
 
 ---
 

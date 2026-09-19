@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.8-beta1 !!!");
+console.log("!!! TEAM TRACKER v2.1.8-beta2 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -59,6 +59,7 @@ const LANG = {
     time_format_24h: "24-Stunden (24H)",
     date_format_label: "Darstellung des Datums",
     match_info_section: "Event-Informationen",
+    show_day_of_week: "Wochentag statt verbleibender Zeit anzeigen",
     next_only: "Nur das nächste/aktuelle Event anzeigen",
     hide_finished: "Beendete Events ausblenden",
     hide_finished_help: "Versteckt Event vom Vortag automatisch um Mitternacht.",
@@ -115,6 +116,7 @@ const LANG = {
     time_format_24h: "24-Hour (24H)",
     date_format_label: "Date Format",
     match_info_section: "Event Information",
+    show_day_of_week: "Show day of week instead of relative time",
     next_only: "Show only next/current event",
     hide_finished: "Hide finished events",
     hide_finished_help: "Automatically hides events from previous days at midnight.",
@@ -171,6 +173,7 @@ const LANG = {
     time_format_24h: "24 heures (24H)",
     date_format_label: "Format de la date",
     match_info_section: "Informations sur l'événement",
+    show_day_of_week: "Afficher le jour de la semaine au lieu du temps restant",
     next_only: "Afficher uniquement le prochain événement / l'événement en cours",
     hide_finished: "Masquer les événements terminés",
     hide_finished_help: "Masque automatiquement les événements de la veille à minuit.",
@@ -451,6 +454,15 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.match_info_section}</div>
         <div class="config-box">
+        <div class="switch-row">
+        <ha-switch
+        .checked="${this._config.show_day_of_week === true}"
+        .configValue="${"show_day_of_week"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.show_day_of_week}</span>
+        </div>
+
         <div class="switch-row ${isSlider ? 'disabled' : ''}">
         <ha-switch
         .checked="${this._config.show_next_only === true}"
@@ -800,7 +812,7 @@ class CompactTeamTracker extends LitElement {
   }
 
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, blurred_entities: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true, enable_score_alerts: false }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, show_day_of_week: false, only_today: false, hide_offseason: false, slider: false, team_colors: {}, blurred_entities: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true, enable_score_alerts: false }; }
 
   get _lang() {
     const rawLang = this.hass?.locale?.language || this.hass?.language || 'en';
@@ -824,6 +836,14 @@ class CompactTeamTracker extends LitElement {
     if (isNaN(kDate.getTime())) return { str: '', isLiveTimer: false };
 
     const diffMs = kDate.getTime() - this._now.getTime();
+
+    // Option: Wochentag statt verbleibender Zeit anzeigen
+    if (this.config?.show_day_of_week && diffMs > 0) {
+      const rawLang = this.hass?.locale?.language || this.hass?.language || 'de';
+      const dayName = kDate.toLocaleDateString(rawLang, { weekday: 'long' });
+      const formattedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+      return { str: formattedDay, isLiveTimer: false };
+    }
 
     if (diffMs > 0 && diffMs <= 60 * 60 * 1000) {
       const totalSec = Math.floor(diffMs / 1000);
@@ -1507,7 +1527,7 @@ class CompactTeamTracker extends LitElement {
       </div>
       <div class="ultra-info">
       ${s === 'PRE'
-        ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.isLiveTimer ? kickoffInfo.str : timeStr}</span>`
+        ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.isLiveTimer ? kickoffInfo.str : (kickoffInfo.str || timeStr)}</span>`
         : html`<span class="ultra-score ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''} ${isBlurred ? 'spoiler-blur' : ''}">${t.pos} ${racingPos}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
       }
       </div>
@@ -1519,7 +1539,7 @@ class CompactTeamTracker extends LitElement {
       </div>
       <div class="ultra-info">
       ${s === 'PRE'
-        ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.isLiveTimer ? kickoffInfo.str : timeStr}</span>`
+        ? html`<span class="ultra-main-text">${shortDateStr}</span><span class="ultra-subtext ${kickoffInfo.isLiveTimer ? 'live-timer' : ''}">${kickoffInfo.isLiveTimer ? kickoffInfo.str : (kickoffInfo.str || timeStr)}</span>`
         : html`<span class="ultra-score ${s === 'IN' ? 'live-score' : ''} ${hasScoreAlert ? 'score-alert-active' : ''} ${isBlurred ? 'spoiler-blur' : ''}">${leftScore}${delim}${rightScore}</span><div class="ultra-subtext"><span>${s === 'IN' ? (a.clock || 'LIVE') : t.finished}</span></div>`
       }
       </div>

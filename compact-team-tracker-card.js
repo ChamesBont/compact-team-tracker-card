@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.7 !!!");
+console.log("!!! TEAM TRACKER v2.1.8-beta1 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -227,8 +227,19 @@ class CompactTeamTrackerEditor extends LitElement {
   }
 
   get _lang() {
-    const l = this.hass?.language || 'de';
-    return LANG[l] || LANG['en'];
+    const rawLang = this.hass?.locale?.language || this.hass?.language || 'en';
+    const langCode = rawLang.split('-')[0].toLowerCase();
+    const activeDict = LANG[langCode] || LANG['en'];
+    const fallbackDict = LANG['en'];
+
+    return new Proxy(activeDict, {
+      get(target, prop) {
+        if (prop in target && target[prop] !== undefined) {
+          return target[prop];
+        }
+        return fallbackDict[prop] !== undefined ? fallbackDict[prop] : prop;
+      }
+    });
   }
 
   _filterEntity(stateObj) {
@@ -791,8 +802,19 @@ class CompactTeamTracker extends LitElement {
   static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, only_today: false, hide_offseason: false, slider: false, team_colors: {}, blurred_entities: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true, enable_score_alerts: false }; }
 
   get _lang() {
-    const l = this.hass?.language || 'de';
-    return LANG[l] || LANG['en'];
+    const rawLang = this.hass?.locale?.language || this.hass?.language || 'en';
+    const langCode = rawLang.split('-')[0].toLowerCase();
+    const activeDict = LANG[langCode] || LANG['en'];
+    const fallbackDict = LANG['en'];
+
+    return new Proxy(activeDict, {
+      get(target, prop) {
+        if (prop in target && target[prop] !== undefined) {
+          return target[prop];
+        }
+        return fallbackDict[prop] !== undefined ? fallbackDict[prop] : prop;
+      }
+    });
   }
 
   _formatKickoffIn(dateStr, t) {
@@ -988,7 +1010,7 @@ class CompactTeamTracker extends LitElement {
     let mainLogo = (isIndividualSport && headshot) ? headshot : (rawLogo || headshot);
 
     if (!mainLogo) {
-      mainLogo = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'><path fill='%23888888' opacity='0.3' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'/></svg>";
+      mainLogo = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'><path fill='%23888888' opacity='0.3' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8 8z'/></svg>";
     }
 
     let rawName = a[`${prefix}name`] || a.name || a.friendly_name || "";

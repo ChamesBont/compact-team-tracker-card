@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.8-beta2 !!!");
+console.log("!!! TEAM TRACKER v2.1.8 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -416,6 +416,14 @@ class CompactTeamTrackerEditor extends LitElement {
         </ha-switch>
         <span>${t.show_tv_network}</span>
         </div>
+        <div class="switch-row">
+        <ha-switch
+        .checked="${this._config.show_day_of_week === true}"
+        .configValue="${"show_day_of_week"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.show_day_of_week}</span>
+        </div>
 
         <div class="select-row">
         <label class="select-label">${t.home_position_label}</label>
@@ -454,15 +462,6 @@ class CompactTeamTrackerEditor extends LitElement {
 
         <div class="section-title">${t.match_info_section}</div>
         <div class="config-box">
-        <div class="switch-row">
-        <ha-switch
-        .checked="${this._config.show_day_of_week === true}"
-        .configValue="${"show_day_of_week"}"
-        @change="${this._toggleOption}">
-        </ha-switch>
-        <span>${t.show_day_of_week}</span>
-        </div>
-
         <div class="switch-row ${isSlider ? 'disabled' : ''}">
         <ha-switch
         .checked="${this._config.show_next_only === true}"

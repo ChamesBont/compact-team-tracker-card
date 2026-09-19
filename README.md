@@ -51,7 +51,7 @@ Multiple options for customization.
 * **Auto-Slide Pause on Hover/Touch:** The automated last play text slider immediately pauses on mousover / touch and resumes smoothly upon mouseleave / touch again.
 * **Spoiler Protection:** Each entity now has its own "Spoiler Protection" (Hide Result) option. Result Obfuscation: When this option is enabled, a fake score (0:0 or position 0) is rendered both during the game and after the game instead of the actual score, and is also heavily blurred. This makes it impossible to guess either the score or the number of digits.
 Disable option: As soon as the toggle is turned off, the display immediately reverts to the actual score without the blur effect.
-* **Multi-Language:** Built-in support for **English** and **German** (auto-detected from Home Assistant settings).
+* **Multi-Language:** Built-in support for **English**, **German** and **French** (auto-detected from Home Assistant settings).
 
 ---
 

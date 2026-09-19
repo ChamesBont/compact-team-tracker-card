@@ -51,6 +51,7 @@ Multiple options for customization.
 * **Auto-Slide Pause on Hover/Touch:** The automated last play text slider immediately pauses on mousover / touch and resumes smoothly upon mouseleave / touch again.
 * **Spoiler Protection:** Each entity now has its own "Spoiler Protection" (Hide Result) option. Result Obfuscation: When this option is enabled, a fake score (0:0 or position 0) is rendered both during the game and after the game instead of the actual score, and is also heavily blurred. This makes it impossible to guess either the score or the number of digits.
 Disable option: As soon as the toggle is turned off, the display immediately reverts to the actual score without the blur effect.
+* **Show day of week or relative time**: Displays either the day of the week of the match or the days remaining until the event.
 * **Multi-Language:** Built-in support for **English**, **German** and **French** (auto-detected from Home Assistant settings).
 
 ---
@@ -107,6 +108,8 @@ Disable option: As soon as the toggle is turned off, the display immediately rev
 | `priority_entity` | string | *optional* | Primary team sensor ID. Prioritized for simultaneous kickoffs and card background coloring. |
 | `team_colors` | map | *optional* | Custom HEX background colors mapped per entity (e.g. `sensor.team_tracker: "#1c1c1e"`). |
 | `blurred_entities` |  list | *optional* | List of entity IDs to apply a backdrop blur / blurred effect to. |
+| `show_day_of_week` | boolean | `false` | Show day of week instead of relative time. |
+
 
 ---
 

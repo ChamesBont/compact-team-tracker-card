@@ -147,6 +147,7 @@ const LANG = {
   fr: {
     manage_teams: "Gérer les entités Team Tracker",
     add_team: "Ajouter une nouvelle ...",
+    blur_result: "Protection anti-spoilers (masquer le résultat)",
     priority_label: "Priorité / Favori",
     prio_picker: "Sélectionner le capteur principal",
     prio_help: "Cette entité est privilégiée en cas d'événements simultanés, et sa couleur personnalisée est toujours prioritaire.",

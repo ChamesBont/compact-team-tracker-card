@@ -52,7 +52,7 @@ Multiple options for customization.
 * **Spoiler Protection:** Each entity now has its own "Spoiler Protection" (Hide Result) option. Result Obfuscation: When this option is enabled, a fake score (0:0 or position 0) is rendered both during the game and after the game instead of the actual score, and is also heavily blurred. This makes it impossible to guess either the score or the number of digits.
 Disable option: As soon as the toggle is turned off, the display immediately reverts to the actual score without the blur effect.
 * **Show day of week or relative time**: Displays either the day of the week of the match or the days remaining until the event.
-* **Multi-Language:** Built-in support for **English**, **German** and **French** (auto-detected from Home Assistant settings).
+* **Multi-Language:** Built-in support for **English**, **German**, **French** and **Azerbaijani** (auto-detected from Home Assistant settings).
 
 ---
 

@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.8.1 !!!");
+console.log("!!! TEAM TRACKER v2.1.8.2 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -305,8 +305,22 @@ class CompactTeamTrackerEditor extends LitElement {
 
   _filterEntity(stateObj) {
     if (!stateObj) return false;
-    const attr = stateObj.attributes?.attribution || "";
-    return attr.toLowerCase().includes("espn") || stateObj.entity_id.includes("team_tracker");
+  
+    const attrs = stateObj.attributes;
+    const attrText = (attrs?.attribution || "").toLowerCase();
+  
+    // 1. Primäre Prüfung (ESPN in Attribution oder team_tracker in Entity-ID)
+    const isClassicMatch = attrText.includes("espn") || stateObj.entity_id.includes("team_tracker");
+  
+    // 2. Sekundäre Prüfung (Fallback auf spezifische Attribute)
+    const hasSpecificAttributes = (
+      attrs?.sport !== undefined ||
+      attrs?.sport_path !== undefined ||
+      attrs?.api_url !== undefined
+    );
+  
+    // Ergibt true, wenn Bedingung 1 ODER Bedingung 2 erfüllt ist
+    return isClassicMatch || hasSpecificAttributes;
   }
 
   render() {

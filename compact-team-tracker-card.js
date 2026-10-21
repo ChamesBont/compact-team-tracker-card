@@ -1,4 +1,4 @@
-console.log("!!! TEAM TRACKER v2.1.8.2 !!!");
+console.log("!!! TEAM TRACKER v2.1.9-beta1 !!!");
 
 const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const html = LitElement.prototype.html;
@@ -42,6 +42,7 @@ const LANG = {
     layout_section: "Erscheinungsbild",
     ultra_layout: "Ultra-Compact-Layout",
     slider_layout: "Als Slider anzeigen",
+    remember_slide: "Aktiven Slide  Reload merken",
     show_league: "Kopfzeile anzeigen",
     show_event_name: "Eventname anzeigen",
     logo_shadow: "Wappen/Profilbild hervorheben",
@@ -99,6 +100,7 @@ const LANG = {
     layout_section: "Appearance",
     ultra_layout: "Ultra-compact layout",
     slider_layout: "Display as slider",
+    remember_slide: "Remember active slide on reload",
     show_league: "Show card header",
     show_event_name: "Show event name",
     logo_shadow: "Highlight logo/profile picture",
@@ -156,6 +158,7 @@ const LANG = {
     layout_section: "Apparence",
     ultra_layout: "Disposition ultra-compacte",
     slider_layout: "Afficher en diaporama",
+    remember_slide: "Mémoriser la diapositive active au rechargement",
     show_league: "Afficher l'en-tête de la carte",
     show_event_name: "Afficher le nom de l'événement",
     logo_shadow: "Mettre en valeur le logo/la photo de profil",
@@ -213,6 +216,7 @@ const LANG = {
     layout_section: "Görünüş",
     ultra_layout: "Çox yığcam düzülüş",
     slider_layout: "Slayd kimi göstər",
+    remember_slide: "Səhifə yenilənəndə aktiv slaydı xatırla",
     show_league: "Kartın başlığını göstər",
     show_event_name: "Oyunun adını göstər",
     logo_shadow: "Loqonu/profil şəklini vurğula",
@@ -305,7 +309,7 @@ class CompactTeamTrackerEditor extends LitElement {
 
   _filterEntity(stateObj) {
     if (!stateObj) return false;
-  
+
     const attrs = stateObj.attributes;
     const attrText = (attrs?.attribution || "").toLowerCase();
   
@@ -443,6 +447,15 @@ class CompactTeamTrackerEditor extends LitElement {
         @change="${this._toggleOption}">
         </ha-switch>
         <span>${t.slider_layout}</span>
+        </div>
+        <div class="switch-row ${!isSlider ? 'disabled' : ''}">
+        <ha-switch
+        .checked="${this._config.remember_slide === true}"
+        .disabled="${!isSlider}"
+        .configValue="${"remember_slide"}"
+        @change="${this._toggleOption}">
+        </ha-switch>
+        <span>${t.remember_slide}</span>
         </div>
         <div class="switch-row ${isUltra ? 'disabled' : ''}">
         <ha-switch
@@ -862,9 +875,9 @@ class CompactTeamTracker extends LitElement {
       if (prevScore !== undefined && prevScore !== scoreStr) {
         triggerHaptic(this, "warning");
         this._activeAlerts = { ...this._activeAlerts, [entId]: true };
-        
+
         if (this._alertTimeouts[entId]) clearTimeout(this._alertTimeouts[entId]);
-        
+
         this._alertTimeouts[entId] = setTimeout(() => {
           const newAlerts = { ...this._activeAlerts };
           delete newAlerts[entId];
@@ -882,7 +895,7 @@ class CompactTeamTracker extends LitElement {
   }
 
   static getConfigElement() { return document.createElement("compact-team-tracker-editor"); }
-  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, show_day_of_week: false, only_today: false, hide_offseason: false, slider: false, team_colors: {}, blurred_entities: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true, enable_score_alerts: false }; }
+  static getStubConfig() { return { entities: [], layout: "standard", show_league: true, show_event_name: true, show_day_of_week: false, remember_slide: false, only_today: false, hide_offseason: false, slider: false, team_colors: {}, blurred_entities: {}, home_team_position: "left", score_delimiter: ":", time_format: "24h", date_format: "DD.MM.YYYY", logo_shadow: false, show_location: true, show_tv_network: true, enable_score_alerts: false }; }
 
   get _lang() {
     const rawLang = this.hass?.locale?.language || this.hass?.language || 'en';
@@ -898,6 +911,39 @@ class CompactTeamTracker extends LitElement {
         return fallbackDict[prop] !== undefined ? fallbackDict[prop] : prop;
       }
     });
+  }
+
+  _getMatchKey(stateObj) {
+    if (!stateObj) return '';
+    const a = stateObj.attributes || {};
+    const tAbbr = a.team_abbr || a.team_name || '';
+    const oAbbr = a.opponent_abbr || a.opponent_name || '';
+    const dateStr = a.date ? a.date.split('T')[0] : '';
+    const leagueStr = a.league || a.league_name || a.sport || '';
+    if (oAbbr && dateStr) {
+      return `${leagueStr}-${tAbbr}-${oAbbr}-${dateStr}`;
+    }
+    return stateObj.entity_id;
+  }
+
+  _saveActiveSlideKey(matchKey) {
+    if (!this.config?.remember_slide) return;
+    try {
+      const storageKey = `ctt_slide_${this.config.entities?.join('_') || 'default'}`;
+      localStorage.setItem(storageKey, matchKey);
+    } catch (e) {
+      console.warn("Team Tracker: Fehler beim Speichern des aktiven Slides", e);
+    }
+  }
+
+  _getSavedActiveSlideKey() {
+    if (!this.config?.remember_slide) return null;
+    try {
+      const storageKey = `ctt_slide_${this.config.entities?.join('_') || 'default'}`;
+      return localStorage.getItem(storageKey);
+    } catch (e) {
+      return null;
+    }
   }
 
   _formatKickoffIn(dateStr, t) {
@@ -928,9 +974,9 @@ class CompactTeamTracker extends LitElement {
     if (diffHours < 1 && diffHours >= 0) {
       return { str: t.in_less_than_hour || '< 1h', isLiveTimer: false };
     } else if (diffHours < 24 && diffHours >= 1) {
-      const val = diffHours === 1 
-        ? (t.in_hour || 'in 1 hour') 
-        : (t.in_hours || 'in {hours} hours').replace('{hours}', diffHours);
+      const val = diffHours === 1
+      ? (t.in_hour || 'in 1 hour')
+      : (t.in_hours || 'in {hours} hours').replace('{hours}', diffHours);
       return { str: val, isLiveTimer: false };
     } else if (diffDays === 1) {
       return { str: t.in_day || 'in 1 day', isLiveTimer: false };
@@ -984,33 +1030,44 @@ class CompactTeamTracker extends LitElement {
     return { timeStr, fullDateStr, shortDateStr, formattedDateTime };
   }
 
-  _prevSlide(max) {
+  _prevSlide(max, displayList) {
     triggerHaptic(this);
-    this._currentSlide = (this._currentSlide > 0) ? this._currentSlide - 1 : max - 1;
+    const newIdx = (this._currentSlide > 0) ? this._currentSlide - 1 : max - 1;
+    this._currentSlide = newIdx;
+    if (displayList && displayList[newIdx]) {
+      this._saveActiveSlideKey(this._getMatchKey(displayList[newIdx]));
+    }
   }
 
-  _nextSlide(max) {
+  _nextSlide(max, displayList) {
     triggerHaptic(this);
-    this._currentSlide = (this._currentSlide < max - 1) ? this._currentSlide + 1 : 0;
+    const newIdx = (this._currentSlide < max - 1) ? this._currentSlide + 1 : 0;
+    this._currentSlide = newIdx;
+    if (displayList && displayList[newIdx]) {
+      this._saveActiveSlideKey(this._getMatchKey(displayList[newIdx]));
+    }
   }
 
-  _setSlide(idx) {
+  _setSlide(idx, displayList) {
     triggerHaptic(this);
     this._currentSlide = idx;
+    if (displayList && displayList[idx]) {
+      this._saveActiveSlideKey(this._getMatchKey(displayList[idx]));
+    }
   }
 
   _handleTouchStart(e) {
     this._touchStartX = e.changedTouches[0].screenX;
   }
 
-  _handleTouchEnd(e, max) {
+  _handleTouchEnd(e, max, displayList) {
     this._touchEndX = e.changedTouches[0].screenX;
     const diff = this._touchStartX - this._touchEndX;
     if (Math.abs(diff) > 40) {
       if (diff > 0) {
-        this._nextSlide(max);
+        this._nextSlide(max, displayList);
       } else {
-        this._prevSlide(max);
+        this._prevSlide(max, displayList);
       }
     }
   }
@@ -1065,9 +1122,9 @@ class CompactTeamTracker extends LitElement {
 
     if (friendlyName) {
       const cleaned = friendlyName
-        .replace(/(teamtracker|tracker)/gi, '')
-        .split('-').pop()
-        .trim();
+      .replace(/(teamtracker|tracker)/gi, '')
+      .split('-').pop()
+      .trim();
       if (cleaned) return cleaned;
     }
 
@@ -1079,21 +1136,21 @@ class CompactTeamTracker extends LitElement {
 
     const prefix = isOpponent ? "opponent_" : "team_";
     let headshot = a[`${prefix}athlete_headshot`] || a[`${prefix}headshot`] || a[`${prefix}player_headshot`] || null;
-    
+
     const rawLogo = a[`${prefix}logo`] || a[`${prefix}team_logo`] || a.logo || a.entity_picture || a.icon || null;
     const id = a[`${prefix}id`] || a[`${prefix}athlete_id`] || a[`${prefix}player_id`] || a.athlete_id || a.player_id || null;
     const sport = (a.sport || a.league || "").toLowerCase();
 
-    const isIndividualSport = sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || 
-                              sport.includes("golf") || sport.includes("racing") || sport.includes("f1") || 
-                              sport.includes("rpm") || sport.includes("nascar") || sport.includes("indycar");
+    const isIndividualSport = sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") ||
+    sport.includes("golf") || sport.includes("racing") || sport.includes("f1") ||
+    sport.includes("rpm") || sport.includes("nascar") || sport.includes("indycar");
 
     if (!headshot && id && isIndividualSport) {
       let sportKey = "rpm";
       if (sport.includes("mma") || sport.includes("ufc")) sportKey = "mma";
       else if (sport.includes("tennis")) sportKey = "tennis";
       else if (sport.includes("golf")) sportKey = "golf";
-      
+
       headshot = `https://a.espncdn.com/i/headshots/${sportKey}/players/full/${id}.png`;
     }
 
@@ -1106,7 +1163,7 @@ class CompactTeamTracker extends LitElement {
 
     let rawName = a[`${prefix}name`] || a.name || a.friendly_name || "";
     let rawAbbr = a[`${prefix}abbr`] || a.abbr || "";
-    
+
     if (rawName.toUpperCase() === "TBD" || rawName.toUpperCase() === "TBA") {
       rawName = "Noch offen (TBD)";
       rawAbbr = "TBD";
@@ -1143,8 +1200,8 @@ class CompactTeamTracker extends LitElement {
       if (otherState && otherState.attributes) {
         const oAttr = otherState.attributes;
         const isMatch = (myAbbr && myAbbr !== "*" && (oAttr.team_abbr === myAbbr || oAttr.opponent_abbr === myAbbr)) ||
-                        (myId && (oAttr.team_id === myId || oAttr.opponent_id === myId));
-        
+        (myId && (oAttr.team_id === myId || oAttr.opponent_id === myId));
+
         if (isMatch) {
           if (oAttr.team_abbr === myAbbr && oAttr.team_logo) return oAttr.team_logo;
           if (oAttr.opponent_abbr === myAbbr && oAttr.opponent_logo) return oAttr.opponent_logo;
@@ -1163,7 +1220,7 @@ class CompactTeamTracker extends LitElement {
     const sport = (a.sport || a.league || "").toLowerCase();
     const isRacingOrEvent = !a.opponent_name && !a.opponent_abbr && (a.position !== undefined || a.event_name);
     const isIndividual = isRacingOrEvent || ((sport.includes("mma") || sport.includes("ufc") || sport.includes("tennis") || sport.includes("golf") || sport.includes("boxing") || sport.includes("racing") || sport.includes("f1")) && (!!a.athlete_id || !!a.player_id || !!a.team_athlete_headshot));
-    
+
     if (isRacingOrEvent) {
       const athlete = this._resolveAthleteData(a, false);
       return {
@@ -1283,15 +1340,28 @@ class CompactTeamTracker extends LitElement {
     }
 
     if (this.config.slider && displayList.length > 1) {
-      if (this._currentSlide >= displayList.length) {
+      if (this.config.remember_slide) {
+        const savedMatchKey = this._getSavedActiveSlideKey();
+        if (savedMatchKey) {
+          const savedIndex = displayList.findIndex(s => this._getMatchKey(s) === savedMatchKey);
+          if (savedIndex !== -1) {
+            this._currentSlide = savedIndex;
+          } else if (this._currentSlide >= displayList.length) {
+            this._currentSlide = 0;
+          }
+        } else if (this._currentSlide >= displayList.length) {
+          this._currentSlide = 0;
+        }
+      } else if (this._currentSlide >= displayList.length) {
         this._currentSlide = 0;
       }
+
       return html`
       <ha-card
       class="slider-card"
       @click="${this._togglePause}"
       @touchstart="${(e) => this._handleTouchStart(e)}"
-      @touchend="${(e) => this._handleTouchEnd(e, displayList.length)}">
+      @touchend="${(e) => this._handleTouchEnd(e, displayList.length, displayList)}">
 
       <div class="slider-track ${this._isPaused ? 'paused' : ''}" style="transform: translateX(-${this._currentSlide * 100}%);">
       ${displayList.map(stateObj => {
@@ -1308,16 +1378,16 @@ class CompactTeamTracker extends LitElement {
       </div>
 
       <div class="slider-nav" @click="${(e) => e.stopPropagation()}">
-      <button class="nav-arrow left" @click="${() => this._prevSlide(displayList.length)}">&#10094;</button>
+      <button class="nav-arrow left" @click="${() => this._prevSlide(displayList.length, displayList)}">&#10094;</button>
       <div class="slider-dots">
       ${displayList.map((_, idx) => html`
         <span
         class="dot-indicator ${idx === this._currentSlide ? 'active' : ''}"
-        @click="${() => this._setSlide(idx)}">
+        @click="${() => this._setSlide(idx, displayList)}">
         </span>
         `)}
         </div>
-        <button class="nav-arrow right" @click="${() => this._nextSlide(displayList.length)}">&#10095;</button>
+        <button class="nav-arrow right" @click="${() => this._nextSlide(displayList.length, displayList)}">&#10095;</button>
         </div>
         </ha-card>
         `;
@@ -1357,11 +1427,11 @@ class CompactTeamTracker extends LitElement {
     const showLeague = this.config.show_league !== false;
     const showEventName = this.config.show_event_name !== false;
 
-    const logoUrl = a.team_logo 
-      || a.entity_picture 
-      || a.team_athlete_headshot 
-      || a.athlete_headshot 
-      || this._resolveBestTeamLogo(entityObj);
+    const logoUrl = a.team_logo
+    || a.entity_picture
+    || a.team_athlete_headshot
+    || a.athlete_headshot
+    || this._resolveBestTeamLogo(entityObj);
 
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
@@ -1385,42 +1455,42 @@ class CompactTeamTracker extends LitElement {
 
       ${showEventName && a.event_name && a.event_name !== (a.league_name || a.league) ? html`
         <div class="event-name-banner">${a.event_name}</div>
-      ` : ''}
+        ` : ''}
 
-      <div class="content no-match-content ${!showLeague && (!showEventName || !a.event_name) ? 'extra-padding' : ''}">
-      <div class="no-match-logo-wrap">
-      ${logoUrl ? html`
-        <img src="${logoUrl}" class="team-logo off-season-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`
-        <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>`}
-        </div>
-        <div class="no-match-message">
-        <div class="no-match-team-name">${teamName}</div>
-        <div class="no-match-title">
+        <div class="content no-match-content ${!showLeague && (!showEventName || !a.event_name) ? 'extra-padding' : ''}">
+        <div class="no-match-logo-wrap">
+        ${logoUrl ? html`
+          <img src="${logoUrl}" class="team-logo off-season-logo ${shadowClass}" @error="${e => e.target.style.display='none'}">` : html`
+          <ha-icon icon="mdi:shield-outline" class="off-season-icon-fallback"></ha-icon>`}
+          </div>
+          <div class="no-match-message">
+          <div class="no-match-team-name">${teamName}</div>
+          <div class="no-match-title">
           ${s === 'BYE' ? t.bye_week : t.no_upcoming_games}
           ${kickoffInfo.str ? html` <span style="font-weight: 400; opacity: 0.85;">(${kickoffInfo.str})</span>` : ''}
-        </div>
-        ${formattedDateTime ? html`
-          <div class="no-match-date" style="font-size: 11px; opacity: 0.75; margin-top: 3px; font-weight: 600;">
-            ${formattedDateTime}
           </div>
-        ` : ''}
-        </div>
-        </div>
-        </div>
-        `;
+          ${formattedDateTime ? html`
+            <div class="no-match-date" style="font-size: 11px; opacity: 0.75; margin-top: 3px; font-weight: 600;">
+            ${formattedDateTime}
+            </div>
+            ` : ''}
+            </div>
+            </div>
+            </div>
+            `;
   }
-  
+
   renderUltraNoMatch(entityObj, t, isInsideSlider = false) {
     const a = entityObj.attributes || {};
     const s = entityObj.state;
     const customBg = isInsideSlider ? null : this._resolveBackgroundColor(entityObj);
     const customStyle = customBg ? `background-color: ${customBg};` : '';
 
-    const logoUrl = a.team_logo 
-      || a.entity_picture 
-      || a.team_athlete_headshot 
-      || a.athlete_headshot 
-      || this._resolveBestTeamLogo(entityObj);
+    const logoUrl = a.team_logo
+    || a.entity_picture
+    || a.team_athlete_headshot
+    || a.athlete_headshot
+    || this._resolveBestTeamLogo(entityObj);
 
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
@@ -1470,10 +1540,10 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
-    
+
     const rawDelim = this.config.score_delimiter || ':';
     const delim = rawDelim === 'none' ? '\u00A0\u00A0\u00A0\u00A0' : ` ${rawDelim} `;
-    
+
     const { timeStr, fullDateStr } = this._formatDateTime(a.date, t);
     const kickoffInfo = this._formatKickoffIn(a.date, t);
 
@@ -1501,7 +1571,7 @@ class CompactTeamTracker extends LitElement {
 
     return html`
     <div class="card-wrapper ${this._isPaused ? 'paused' : ''}" style="${customStyle}"
-      @click="${this._togglePause}">
+    @click="${this._togglePause}">
     ${showLeague || s === 'IN' ? html`
       <div class="header-bg">
       <div class="header ${!showLeague ? 'no-league' : ''}">
@@ -1570,10 +1640,10 @@ class CompactTeamTracker extends LitElement {
     const a = entityObj.attributes;
     const s = entityObj.state;
     const sides = this._getMatchSides(a);
-    
+
     const rawDelim = this.config.score_delimiter || ':';
     const delim = rawDelim === 'none' ? '\u00A0\u00A0\u00A0\u00A0' : rawDelim;
-    
+
     const shadowClass = this.config.logo_shadow ? 'custom-logo-shadow' : '';
 
     const { timeStr, shortDateStr } = this._formatDateTime(a.date, t);
@@ -1829,7 +1899,7 @@ class CompactTeamTracker extends LitElement {
     .play-container.marquee { overflow: hidden; white-space: nowrap; }
     .play-container.multiline { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     .play { display: inline-block; color: var(--primary-text-color); font-style: normal; max-width: 100%; }
-    
+
     /* PAUSE STATE FOR SLIDER CONTINUITY & CARDS */
     @media (hover: hover) {
       .card-wrapper:hover .play {
@@ -1839,7 +1909,7 @@ class CompactTeamTracker extends LitElement {
     .card-wrapper.paused .play,
     .slider-track.paused .play { animation-play-state: paused !important; }
     .marquee .play { max-width: none; padding-left: 100%; animation: marquee 15s linear infinite; }
-    
+
     @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
     .ultra-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; width: 100%; box-sizing: border-box; border-radius: inherit; transition: background-color 0.3s ease; position: relative; }
     .ultra-team { display: flex; align-items: center; gap: 8px; flex: 1; }
@@ -1857,9 +1927,9 @@ class CompactTeamTracker extends LitElement {
 
     .ultra-info { flex: 1.2; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
     .ultra-score, .ultra-main-text { font-size: 18px; font-weight: 900; color: var(--primary-text-color); transition: transform 0.2s ease; }
-    
+
     .live-score { color: #e74c3c !important; font-weight: 900; }
-    
+
     .ultra-subtext { font-size: 10px; opacity: 0.7; font-weight: bold; display: flex; flex-direction: column; }
 
     .live-border::before {
